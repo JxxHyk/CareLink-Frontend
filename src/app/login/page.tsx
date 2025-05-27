@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 // import Image from 'next/image';
 
 // MainPageController로 전달할 사용자 정보 타입
@@ -18,7 +19,7 @@ interface UserDataForApp {
 // 부모 컴포넌트(MainPageController)가 정의한 타입의 함수를 그냥 호출만 하면 됨.
 // 더 명확하게 하려면 LoginPageProps의 onLoginSuccess 타입을 MainPageController와 동일하게 정의.
 interface LoginPageProps {
-   onLoginSuccess: (token: string, userData: UserDataForApp) => void;
+  onLoginSuccess: (token: string, userData: UserDataForApp) => void;
 }
 
 // 이 LoginPage 컴포넌트는 MainPageController가 아닌, Next.js 라우터에 의해 직접 렌더링됨
@@ -112,11 +113,11 @@ export default function ActualLoginPage() { // 컴포넌트 이름 변경 (혼�
           {/* 아이디, 비밀번호 입력 필드, 에러 메시지, 로그인 버튼 */}
           <div className="mb-5">
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">아이디</label>
-            <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors" placeholder="아이디를 입력하세요" disabled={isLoading}/>
+            <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors" placeholder="아이디를 입력하세요" disabled={isLoading} />
           </div>
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">비밀번호</label>
-            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors" placeholder="비밀번호를 입력하세요" disabled={isLoading}/>
+            <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-colors" placeholder="비밀번호를 입력하세요" disabled={isLoading} />
           </div>
           {error && <p className="text-xs text-red-600 bg-red-100 p-2 rounded-md text-center mb-4">{error}</p>}
           <button type="submit" className="w-full bg-primary hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-150 ease-in-out disabled:opacity-75" disabled={isLoading}>
@@ -124,7 +125,9 @@ export default function ActualLoginPage() { // 컴포넌트 이름 변경 (혼�
           </button>
         </form>
         <div className="mt-8 text-center">
-          <a href="#" className="text-sm text-primary hover:text-indigo-700 hover:underline">계정 문의 / 비밀번호 찾기</a>
+          <Link href="/register" className="text-sm text-primary hover:text-indigo-700 hover:underline">
+            계정이 없으신가요? 회원가입
+          </Link>
         </div>
       </div>
     </div>
