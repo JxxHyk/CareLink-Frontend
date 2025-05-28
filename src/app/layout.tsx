@@ -1,12 +1,10 @@
 // src/app/layout.tsx
-
 import type { Metadata } from 'next';
-import './globals.css';
-import MyCustomLayout from '@/components/Layout';
+import './globals.css'; // 전역 CSS
 
 export const metadata: Metadata = {
   title: 'CareLink',
-  description: '환자 모니터링 시스템',
+  description: '모니터링 시스템',
 };
 
 export default function RootLayout({
@@ -25,7 +23,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <MyCustomLayout>{children}</MyCustomLayout>
+        {children} {/* 페이지별 내용이 여기에 바로 렌더링됨 */}
       </body>
     </html>
   );

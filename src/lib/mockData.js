@@ -1,10 +1,11 @@
 // lib/mockData.js
 export const initialPatients = [
   {
-    id: 'P-78542',
-    name: '김준호',
+    patient_id: '1',
+    full_name: '김준호',
+    patient_code: 'Test-001',
     age: 72,
-    room: '304',
+    // room: '304',
     risk: 'medium',
     heartRate: 92,
     temperature: 38.2,
@@ -24,10 +25,11 @@ export const initialPatients = [
     }
   },
   {
-    id: 'P-65431',
-    name: '박영자',
+    patient_id: '2',
+    full_name: '박영자',
+    patient_code: 'Test-002',
     age: 85,
-    room: '215',
+    // room: '215',
     risk: 'high',
     heartRate: 115,
     temperature: 39.1,
