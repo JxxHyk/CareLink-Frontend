@@ -8,7 +8,7 @@ import type { Patient } from '@/types'; // 공통 타입 파일에서 Patient �
 interface PatientListProps {
   patients: Patient[];
   onSelectPatient: (patient: Patient) => void;
-  selectedPatientId: string | null;
+  selectedPatientId: number | null;
   searchTerm: string;
   setSearchTerm: Dispatch<SetStateAction<string>>; // useState의 setter 함수 타입
   onSort: (criteria: string) => void;
@@ -47,9 +47,9 @@ const PatientList = ({
             >
               <i className="ri-refresh-line mr-1"></i>새로고침
             </button>
-            <button className="px-2 py-1 text-xs text-white bg-primary hover:bg-primary/90 rounded-button whitespace-nowrap">
+            {/* <button className="px-2 py-1 text-xs text-white bg-primary hover:bg-primary/90 rounded-button whitespace-nowrap">
               <i className="ri-add-line mr-1"></i>환자 추가
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="relative mb-4">

@@ -32,7 +32,7 @@ const Layout = ({ children, currentUser }: LayoutProps) => {
       {/* Navbar와 SubHeader에 currentUser 정보를 그대로 전달 */}
       <Navbar currentUser={currentUser} />
       <SubHeader currentUser={currentUser} />
-      <main className="flex flex-1 overflow-hidden"> {/* overflow-hidden은 로그인 페이지 잘림 문제 해결 후 다시 넣어도 됨 */}
+      <main className="flex flex-1 overflow-y-auto"> {/* overflow-hidden은 로그인 페이지 잘림 문제 해결 후 다시 넣어도 됨 */}
         {children}
       </main>
     </div>

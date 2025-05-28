@@ -1,7 +1,6 @@
 // src/app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css'; // 전역 CSS
-// import MyCustomLayout from '@/components/Layout'; // 여기서 직접 사용 안 함
 
 export const metadata: Metadata = {
   title: 'CareLink',

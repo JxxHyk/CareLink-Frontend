@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Patient, User, OrganizationInfo } from '@/types';
 
 // 컴포넌트 import
 import MyCustomLayout from '@/components/Layout';
@@ -13,43 +14,6 @@ import PatientDetail from '@/components/PatientDetail';
 // 목업 데이터 import
 import { initialPatientProfiles } from '@/lib/patientInfoMockData'; // 환자 기본 정보
 import { timeSeriesData } from '@/lib/timeSeriesMockData';         // 환자 시계열 정보
-
-// --- 타입 정의 (실제로는 src/types/index.ts 같은 곳에서 import 권장) ---
-interface OrganizationInfo {
-  id: number;
-  name: string;
-}
-
-interface User {
-  name: string;
-  role: string;
-  organization?: OrganizationInfo | null;
-  // is_superuser?: boolean;
-}
-
-interface Patient {
-  patient_id: number; // DB와 일치 (숫자)
-  full_name: string;  // DB와 일치
-  age: number;
-  // room: string;       // 이 필드가 patientInfoMockData 또는 API 응답에 있는지 확인
-  risk: 'high' | 'medium' | 'low'; // 이 필드가 patientInfoMockData 또는 API 응답에 있는지 확인
-  heartRate: number | null;
-  temperature: number | null;
-  fallStatus: 'normal' | 'alert' | null; // 이 필드가 patientInfoMockData 또는 API 응답에 있는지 확인
-  lastUpdated: string; // 이 필드가 patientInfoMockData 또는 API 응답에 있는지 확인
-  heartRateHistory: number[] | null;
-  temperatureHistory: number[] | null;
-  gyro: { x: number; y: number; z: number }; // API 응답 구조 확인
-  lastMovement: string; // API 응답 구조 확인
-  movementPattern: string; // API 응답 구조 확인
-  gps: { lat: string; long: string; address: string; timestamp: string; }; // API 응답 구조 확인
-  organization_id?: number;
-  patient_code?: string;
-  // created_at?: string | Date;
-  // updated_at?: string | Date;
-}
-// --- 타입 정의 끝 ---
-
 
 // --- 데이터를 FastAPI 백엔드에서 가져오는 비동기 함수 ---
 async function fetchAllPatientsFromAPI(token: string | null, organizationId: number | undefined): Promise<Patient[]> {
@@ -84,21 +48,21 @@ async function fetchAllPatientsFromAPI(token: string | null, organizationId: num
     }
     const data = await response.json();
     console.log(`API response for organization ID ${organizationId}:`, data);
-    
+
     // API 응답 데이터가 Patient[] 타입과 일치하는지 확인하고, 필요시 변환
     // 예: API가 patient_id, full_name 대신 id, name을 보낸다면 여기서 매핑
     return (data as any[]).map(apiPatient => ({
-        ...apiPatient, // API에서 온 다른 필드들
-        patient_id: apiPatient.patient_id || apiPatient.id, // API 필드명에 따라
-        full_name: apiPatient.full_name || apiPatient.name, // API 필드명에 따라
-        // heartRate, temperature 등은 API 응답에 최신값이 current_... 형태로 올 수 있음
-        heartRate: apiPatient.current_heart_rate ?? null,
-        temperature: apiPatient.current_temperature ?? null,
-        fallStatus: apiPatient.current_fall_status ?? null,
-        // 히스토리 데이터도 API에서 직접 받아오거나, 초기에는 빈 배열 또는 null
-        heartRateHistory: Array.isArray(apiPatient.heart_rate_history) ? apiPatient.heart_rate_history : [],
-        temperatureHistory: Array.isArray(apiPatient.temperature_history) ? apiPatient.temperature_history : [],
-        // Patient 타입에 정의된 다른 모든 필드들을 API 응답에 맞춰 채워야 함
+      ...apiPatient, // API에서 온 다른 필드들
+      patient_id: apiPatient.patient_id || apiPatient.id, // API 필드명에 따라
+      full_name: apiPatient.full_name || apiPatient.name, // API 필드명에 따라
+      // heartRate, temperature 등은 API 응답에 최신값이 current_... 형태로 올 수 있음
+      heartRate: apiPatient.current_heart_rate ?? null,
+      temperature: apiPatient.current_temperature ?? null,
+      fallStatus: apiPatient.current_fall_status ?? null,
+      // 히스토리 데이터도 API에서 직접 받아오거나, 초기에는 빈 배열 또는 null
+      heartRateHistory: Array.isArray(apiPatient.heart_rate_history) ? apiPatient.heart_rate_history : [],
+      temperatureHistory: Array.isArray(apiPatient.temperature_history) ? apiPatient.temperature_history : [],
+      // Patient 타입에 정의된 다른 모든 필드들을 API 응답에 맞춰 채워야 함
     })) as Patient[];
 
   } catch (error) {
@@ -132,6 +96,7 @@ function DashboardView({ onLogout, currentUser, authToken }: {
         if (currentOrganizationId === 1) { // 기관 ID 1번이면 목업 데이터 조합
           console.log("Org ID 1: Loading and combining mock patient profiles and time series data.");
           patientsDataToSet = initialPatientProfiles.map(profile => {
+            const patientIdKey = profile.patient_id as number; // 명시적 타입 또는 타입 가드
             const series = timeSeriesData[profile.patient_id as keyof typeof timeSeriesData];
             return {
               ...profile, // 기본 프로필 정보 (patient_id, full_name 등 Patient 타입과 일치해야 함)
@@ -151,7 +116,7 @@ function DashboardView({ onLogout, currentUser, authToken }: {
         } else {
           console.warn("Current user has no organization ID. Cannot load patient data.");
         }
-        
+
         setAllPatients(patientsDataToSet);
         setIsLoadingPatients(false);
       } else {
@@ -189,7 +154,7 @@ function DashboardView({ onLogout, currentUser, authToken }: {
   // 시계열 목업 데이터 업데이트 시뮬레이션 (기관 ID 1번 전용)
   useEffect(() => {
     if (currentUser?.organization?.id !== 1 || allPatients.length === 0 || isLoadingPatients) {
-      return; 
+      return;
     }
 
     const interval = setInterval(() => {
@@ -197,6 +162,7 @@ function DashboardView({ onLogout, currentUser, authToken }: {
         prevPatients.map(p => {
           if (p.organization_id !== 1) return p; // 기관 ID 1번 환자만 시뮬레이션
 
+          const patientIdKey = p.patient_id as number; // Patient 타입에 patient_id: number로 정의되어 있어야 함
           const series = timeSeriesData[p.patient_id as keyof typeof timeSeriesData];
           if (series && Array.isArray(series.heartRate) && Array.isArray(series.temperature)) {
             const timeSeriesLength = Math.min(series.heartRate.length, series.temperature.length);
@@ -205,8 +171,8 @@ function DashboardView({ onLogout, currentUser, authToken }: {
               setCurrentTimeIndex(0); // 인덱스 초기화 또는 다른 처리
               return { // 마지막 값으로 고정 또는 다른 값으로 초기화
                 ...p,
-                heartRate: series.heartRate[timeSeriesLength -1] || null,
-                temperature: series.temperature[timeSeriesLength -1] || null,
+                heartRate: series.heartRate[timeSeriesLength - 1] || null,
+                temperature: series.temperature[timeSeriesLength - 1] || null,
                 lastUpdated: 'No new data',
               };
             }
@@ -248,8 +214,19 @@ function DashboardView({ onLogout, currentUser, authToken }: {
     }
     const sorted: Patient[] = [...filtered];
     if (sortCriteria === 'risk') {
-      const riskOrder: { [key in Patient['risk']]: number } = { high: 0, medium: 1, low: 2 };
-      sorted.sort((a: Patient, b: Patient) => (riskOrder[a.risk] ?? 2) - (riskOrder[b.risk] ?? 2));
+      const riskOrder: { [key in 'high' | 'medium' | 'low']: number } = {
+        high: 0,
+        medium: 1,
+        low: 2,
+      };
+      const defaultRiskValueForSort: 'low' = 'low'; // 또는 다른 기본값
+
+      sorted.sort((a: Patient, b: Patient) => {
+                // 👇 a.risk 와 b.risk가 null 또는 undefined일 경우 기본값 사용!
+        const aRisk = a.risk ?? defaultRiskValueForSort;
+        const bRisk = b.risk ?? defaultRiskValueForSort;
+        return riskOrder[aRisk] - riskOrder[bRisk];
+      });
     } else if (sortCriteria === 'name') {
       sorted.sort((a: Patient, b: Patient) => (a.full_name || '').localeCompare(b.full_name || ''));
     } else if (sortCriteria === 'heart') {
@@ -297,7 +274,7 @@ function DashboardView({ onLogout, currentUser, authToken }: {
         <div className="w-[320px] border-r border-gray-200 bg-white flex flex-col shrink-0">
           <div className="p-4 border-b space-y-2">
             <button onClick={onLogout} className="w-full p-2 bg-red-500 text-white rounded hover:bg-red-600">
-                로그아웃
+              로그아웃
             </button>
             {/* <button onClick={handleRefreshPatients} className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                 환자 목록 새로고침
@@ -321,9 +298,9 @@ function DashboardView({ onLogout, currentUser, authToken }: {
             <div className="p-6 flex-1 flex items-center justify-center">
               <p className="text-gray-500">
                 {allPatients.length > 0 && displayedPatients.length === 0 ? '검색 결과가 없습니다.' :
-                 allPatients.length === 0 && currentUser ? '표시할 환자 데이터가 없습니다.' :
-                 !currentUser ? '' :
-                 '목록에서 환자를 선택해주세요.'}
+                  allPatients.length === 0 && currentUser ? '표시할 환자 데이터가 없습니다.' :
+                    !currentUser ? '' :
+                      '목록에서 환자를 선택해주세요.'}
               </p>
             </div>
           )}
@@ -398,7 +375,7 @@ export default function MainPageController() {
 
   if (!isAuthenticated) {
     if (typeof window !== "undefined" && window.location.pathname !== '/login') {
-        return <div className="flex items-center justify-center min-h-screen text-xl">로그인 페이지로 이동 중...</div>;
+      return <div className="flex items-center justify-center min-h-screen text-xl">로그인 페이지로 이동 중...</div>;
     }
     return null;
   }
