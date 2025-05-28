@@ -1,20 +1,20 @@
 // src/components/SubHeader.tsx
-import { UserRoleType } from '@/app/page';
 import React from 'react';
+import type { User, OrganizationInfo, UserRoleType } from '@/types';
 
-// User 및 OrganizationInfo 인터페이스 정의 또는 import
-// Layout.tsx와 동일한 User 타입을 사용해야 함!
-interface OrganizationInfo {
-  id: number;
-  name: string;
-}
+// // User 및 OrganizationInfo 인터페이스 정의 또는 import
+// // Layout.tsx와 동일한 User 타입을 사용해야 함!
+// interface OrganizationInfo {
+//   id: number;
+//   name: string;
+// }
 
-// User 타입을 여기서도 정의하거나 import
-interface User {
-  name: string;
-  role: UserRoleType;
-  organization?: OrganizationInfo | null;
-}
+// // User 타입을 여기서도 정의하거나 import
+// interface User {
+//   name: string;
+//   role: UserRoleType;
+//   organization?: OrganizationInfo | null;
+// }
 
 // 역할 코드에 따른 한국어 이름 매핑 객체
 const roleDisplayNames: { [key in UserRoleType]?: string } = {

@@ -31,10 +31,10 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
             <i className="ri-user-line text-gray-600"></i>
           </div>
           <div>
-            <h3 className="font-medium text-gray-800">{patient.name}</h3>
+            <h3 className="font-medium text-gray-800">{patient.full_name}</h3>
             <div className="flex items-center text-xs text-gray-500 mt-0.5">
-              <span className="mr-2">ID: {patient.id}</span>
-              <span>Room: {patient.room}</span>
+              <span className="mr-2">ID: {patient.patient_code}</span>
+              {/* <span>Room: {patient.room}</span> */}
             </div>
           </div>
         </div>
@@ -54,7 +54,9 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
           <div>
             <span className="text-xs text-gray-500">Heart</span>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-800">{patient.heartRate}</span>
+              <span className="text-sm font-medium text-gray-800">
+                {patient.heartRate !== null ? patient.heartRate : '--'} {/* 👈 null이면 "--" 표시 */}
+              </span>
               <span className="text-xs text-gray-500 ml-1">BPM</span>
             </div>
           </div>
@@ -66,7 +68,9 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
           <div>
             <span className="text-xs text-gray-500">Temp</span>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-800">{patient.temperature}</span>
+              <span className="text-sm font-medium text-gray-800">
+                {patient.temperature !== null ? patient.temperature : '--'}
+              </span>
               <span className="text-xs text-gray-500 ml-1">°C</span>
             </div>
           </div>
@@ -78,7 +82,9 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
           <div>
             <span className="text-xs text-gray-500">Fall</span>
             <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-800">{patient.fallStatus === 'alert' ? 'Alert' : 'OK'}</span>
+              <span className="text-sm font-medium text-gray-800">
+                {patient.fallStatus !== null ? (patient.fallStatus === 'alert' ? 'Alert' : 'OK') : '--'}
+              </span>
             </div>
           </div>
         </div>

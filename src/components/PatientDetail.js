@@ -14,11 +14,11 @@ const PatientDetail = ({ patient }) => {
     <div className="p-6 flex-1 overflow-y-auto scrollbar-hide">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">{patient.name}</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{patient.full_name}</h2>
           <div className="flex items-center mt-1">
-            <span className="text-sm text-gray-500 mr-4">ID: {patient.id}</span>
-            <span className="text-sm text-gray-500 mr-4">Age: {patient.age}</span>
-            <span className="text-sm text-gray-500">Room: {patient.room}</span>
+            <span className="text-sm text-gray-500 mr-4">ID: {patient.patient_code}</span>
+            <span className="text-sm text-gray-500 mr-4">생년월일: {patient.date_of_birth}</span>
+            {/* <span className="text-sm text-gray-500">Room: {patient.room}</span> */}
           </div>
         </div>
         <div className="flex space-x-2">
