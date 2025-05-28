@@ -1,11 +1,27 @@
 // src/components/SubHeader.tsx
+import { UserRoleType } from '@/app/page';
 import React from 'react';
+
+// User 및 OrganizationInfo 인터페이스 정의 또는 import
+// Layout.tsx와 동일한 User 타입을 사용해야 함!
+interface OrganizationInfo {
+  id: number;
+  name: string;
+}
 
 // User 타입을 여기서도 정의하거나 import
 interface User {
   name: string;
-  role: string;
+  role: UserRoleType;
+  organization?: OrganizationInfo | null;
 }
+
+// 역할 코드에 따른 한국어 이름 매핑 객체
+const roleDisplayNames: { [key in UserRoleType]?: string } = {
+  "super_admin": "시스템 관리자",
+  "admin": "관리자",
+  "staff": "직원"
+};
 
 interface SubHeaderProps {
   currentUser: User | null;
@@ -13,7 +29,8 @@ interface SubHeaderProps {
 
 const SubHeader = ({ currentUser }: SubHeaderProps) => {
   const displayName = currentUser ? currentUser.name : '사용자'; // 기본값 설정
-  const displayRole = currentUser ? currentUser.role : '정보 없음'; // 기본값 설정
+  const displayRole = currentUser?.role ? (roleDisplayNames[currentUser.role] || '담당자') : '정보 없음';
+
 
   return (
     <header className="bg-white border-b border-gray-200 py-3 px-6 flex justify-between items-center">

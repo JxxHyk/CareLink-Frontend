@@ -13,11 +13,27 @@ import PatientDetail from '@/components/PatientDetail';
 // 목업 데이터 (실제로는 로그인 후 API로 환자 데이터 가져와야 함)
 import { initialPatients } from '@/lib/mockData';
 
+export type UserRoleType = "super_admin" | "admin" | "staff" | string; // string은 혹시 모를 다른 값 대비
+
 // 타입 정의
+interface OrganizationInfo {
+  id: number;
+  name: string;
+}
+
 interface User {
   name: string;
-  role: string;
+  role: UserRoleType;
+  organization?: OrganizationInfo | null;
   // id?: string; // FastAPI /me 응답에 따라 추가 가능
+}
+
+// LoginPage에서 MainPageController로 전달할 때 사용할 타입도 일치시키거나,
+// User 인터페이스를 직접 사용해도 됨.
+export interface UserDataForApp { // 이 타입은 LoginPage.tsx에서도 사용
+  name: string;
+  role: UserRoleType;
+  organization?: OrganizationInfo | null;
 }
 
 interface Patient {

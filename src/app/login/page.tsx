@@ -4,12 +4,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { UserRoleType } from '../page';
 // import Image from 'next/image';
+
+// MainPageController로 전달할 사용자 정보 타입
+interface OrganizationInfo {
+  id: number; // 또는 string, 백엔드 응답에 맞춰서
+  name: string;
+}
 
 // MainPageController로 전달할 사용자 정보 타입
 interface UserDataForApp {
   name: string;
-  role: string;
+  role: UserRoleType;
+  organization?: OrganizationInfo | null;
 }
 
 // MainPageController의 handleLoginSuccess 타입과 맞춰야 함
@@ -79,8 +87,12 @@ export default function ActualLoginPage() { // 컴포넌트 이름 변경 (혼�
 
       const appUserData: UserDataForApp = {
         name: userDataFromMe.full_name || userDataFromMe.username || "사용자",
-        role: userDataFromMe.role || "담당자",
+        role: userDataFromMe.user_type || "staff",
+        organization: userDataFromMe.organization 
+                ? { id: userDataFromMe.organization.id, name: userDataFromMe.organization.name } 
+                : null,
       };
+      
 
       // 로그인 성공: localStorage에 정보 저장하고 메인 페이지로 이동
       if (typeof window !== "undefined") {

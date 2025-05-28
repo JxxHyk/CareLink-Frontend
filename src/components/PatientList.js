@@ -36,11 +36,11 @@ const PatientList = ({ patients, onSelectPatient, selectedPatientId, searchTerm,
           </div>
         </div>
         <div className="flex space-x-2 mb-2">
-          <button onClick={() => onSort('risk')} className={sortButtonClass('risk')}>
-            <i className="ri-alert-line mr-1"></i>위험도순
-          </button>
           <button onClick={() => onSort('name')} className={sortButtonClass('name')}>
             <i className="ri-sort-alphabet-line mr-1"></i>이름순
+          </button>
+          <button onClick={() => onSort('risk')} className={sortButtonClass('risk')}>
+            <i className="ri-alert-line mr-1"></i>위험도순
           </button>
           <button onClick={() => onSort('heart')} className={sortButtonClass('heart')}>
             <i className="ri-heart-pulse-line mr-1"></i>심박수
