@@ -191,67 +191,13 @@ function DashboardView({ onLogout, currentUser, authToken }: {
               temperature: newTemperature,
               risk: newRisk,
               lastUpdated: 'just now',
-<<<<<<< HEAD
-              heartRateHistory: newHeartRateHistory,
-              temperatureHistory: newTemperatureHistory,
-              gyro: {
-                x: parseFloat((Math.random() * 1 - 0.5).toFixed(2)),
-                y: parseFloat((Math.random() * 1 - 0.5).toFixed(2)),
-                z: parseFloat((Math.random() * 0.4 + 0.8).toFixed(2)), // 0.8 ~ 1.2
-              },
-              fallStatus: (newRisk === 'high' && Math.random() < 0.3) ? 'alert' : p.fallStatus, // 위험도 높을때 가끔 낙상 알림
-=======
               // 히스토리 배열은 이미 전체 시계열을 가지고 있으므로, 여기서는 업데이트 안 함
               // heartRateHistory, temperatureHistory는 카드에서 잘라서 보여준다고 가정
->>>>>>> feature/manage
             };
           }
           return p;
         })
       );
-<<<<<<< HEAD
-    }, 5000); // 5초마다 업데이트
-
-    return () => clearInterval(interval); // 컴포넌트 언마운트 시 인터벌 정리
-  }, []); // 최초 1회만 실행
-
-  // --- 이벤트 핸들러 ---
-  const handleSelectPatient = (patient: Patient) => {
-    setSelectedPatientId(patient.id);
-  };
-
-  const handleSort = (criteria: string) => {
-    setSortCriteria(criteria);
-  };
-
-  // --- JSX 반환 ---
-  return (
-    <> {/* RootLayout의 children으로 들어가는 부분이므로 Fragment 사용 */}
-      <div className="w-[320px] border-r border-gray-200 bg-white flex flex-col shrink-0">
-        {/* PatientList 컴포넌트에 필요한 props 전달 */}
-        <PatientList
-          patients={displayedPatients}
-          onSelectPatient={handleSelectPatient}
-          selectedPatientId={selectedPatientId}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm} // 검색어 변경 함수 전달
-          onSort={handleSort} // 정렬 함수 전달
-          activeSort={sortCriteria} // 현재 정렬 기준 전달
-        />
-      </div>
-      <div className="flex-1 bg-gray-50 flex flex-col overflow-y-auto">
-        {/* PatientDetail 컴포넌트에 선택된 환자 정보 전달 */}
-        {selectedPatient ? (
-          <PatientDetail patient={selectedPatient} />
-        ) : (
-          <div className="p-6 flex-1 flex items-center justify-center">
-            <p className="text-gray-500">목록에서 환자를 선택해주세요.</p>
-          </div>
-        )}
-      </div>
-    </>
-  );
-=======
       setCurrentTimeIndex(prevIndex => prevIndex + 1);
     }, 2000); // 2초마다 업데이트
 
@@ -435,5 +381,4 @@ export default function MainPageController() {
   }
 
   return <DashboardView onLogout={handleLogout} currentUser={currentUser} authToken={authToken} />;
->>>>>>> feature/manage
 }

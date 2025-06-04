@@ -1,193 +1,182 @@
 // src/components/TemperatureCard.tsx
-import React, { useEffect, useRef } from 'react'; // React와 훅들 import
-import * as echarts from 'echarts/core'; // ECharts 핵심 라이브러리
-import { LineChart, LineSeriesOption } from 'echarts/charts'; // 라인 차트 사용
+import React, { useEffect, useRef, useState } from 'react'; // 🟡 useState 추가!
+import * as echarts from 'echarts/core';
+import { LineChart, LineSeriesOption } from 'echarts/charts';
 import {
   GridComponent,
   GridComponentOption,
   TooltipComponent,
   TooltipComponentOption,
+  // MarkLineComponent, // 체온 카드에서는 MarkLine을 사용하지 않는다면 제거해도 됨
 } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers'; // Canvas 렌더러 사용
+import { CanvasRenderer } from 'echarts/renderers';
+import type { ECOption } from '@/types/echarts'; // 우리가 만든 ECOption 타입!
 
-// ECharts에 필요한 컴포넌트와 차트 등록
 echarts.use([
   GridComponent,
   TooltipComponent,
   LineChart,
   CanvasRenderer,
+  // MarkLineComponent, // 사용하지 않으면 여기서도 제거
 ]);
 
-// ECharts 옵션 타입을 위한 결합 타입
-type ECOption = echarts.ComposeOption<
-  | LineSeriesOption
-  | GridComponentOption
-  | TooltipComponentOption
->;
-
-// TemperatureCard 컴포넌트가 받을 props들의 타입을 정의
 interface TemperatureCardProps {
-  temperature: number | null; // 현재 체온 (null일 수 있음)
-  history: number[] | null;   // 체온 기록 배열 (null일 수 있음)
+  temperature: number | null; // 🟡 실시간으로 업데이트될 "현재" 체온
+  history: number[] | null;   // 🟡 초기 차트 또는 전체 이력 데이터
 }
+
+const MAX_DISPLAY_POINTS = 20; // 🟡 차트에 표시할 최대 데이터 포인트 수 (HeartRateCard와 동일하게)
 
 const TemperatureCard = ({ temperature, history }: TemperatureCardProps) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
+  const [displayHistory, setDisplayHistory] = useState<number[]>([]);
+  const [xAxisData, setXAxisData] = useState<string[]>([]);
+
+  // 1. 초기 데이터 설정 및 환자 변경 시 history prop으로 displayHistory 와 xAxisData 초기화
   useEffect(() => {
-    if (chartRef.current) {
-      if (!chartInstanceRef.current) {
+    console.log("TemperatureCard: Initial history prop changed or component mounted.", history);
+    if (history && history.length > 0) {
+      const initialSlice = history.slice(-MAX_DISPLAY_POINTS);
+      setDisplayHistory(initialSlice);
+      setXAxisData(Array.from({ length: initialSlice.length }, (_, i) => `P${i + 1}`));
+    } else {
+      setDisplayHistory([]);
+      setXAxisData([]);
+    }
+  }, [history]);
+
+  // 2. 새로운 temperature prop 값이 들어올 때마다 displayHistory 업데이트 (슬라이딩 윈도우)
+  useEffect(() => {
+    if (typeof temperature === 'number') {
+      console.log("TemperatureCard: New temperature prop received:", temperature);
+      setDisplayHistory(prevDisplayHistory => {
+        const newHistory = [...prevDisplayHistory, temperature];
+        return newHistory.length > MAX_DISPLAY_POINTS
+          ? newHistory.slice(newHistory.length - MAX_DISPLAY_POINTS)
+          : newHistory;
+      });
+    }
+  }, [temperature]);
+
+  // 3. displayHistory가 변경되면 xAxisData를 업데이트하는 별도의 useEffect
+  useEffect(() => {
+    console.log("TemperatureCard: displayHistory changed, updating xAxisData.", displayHistory);
+    setXAxisData(
+      Array.from({ length: displayHistory.length }, (_, i) => `P${i + 1}`)
+    );
+  }, [displayHistory]);
+
+  // 4. ECharts 업데이트 (displayHistory 또는 xAxisData가 바뀔 때마다)
+  useEffect(() => {
+    if (chartRef.current && (displayHistory.length > 0 || xAxisData.length > 0)) {
+      if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) {
+        console.log("TemperatureCard: Initializing new ECharts instance.");
         chartInstanceRef.current = echarts.init(chartRef.current);
+      } else {
+        console.log("TemperatureCard: Using existing ECharts instance.");
       }
 
       const option: ECOption = {
-        animation: false,
-        grid: { top: 20, right: 20, bottom: 30, left: 45 }, // 여백 조정
+        animation: false, // 🟡 네가 선호하는 설정으로!
+        animationDurationUpdate: 300, // animation:false면 이 값은 크게 의미 없을 수 있어
+        grid: { top: 20, right: 20, bottom: 30, left: 45 },
         xAxis: {
           type: 'category',
-          data: history?.map((_, index) => index.toString()) || ['Now'], // history 길이에 맞추거나 기본값
+          data: xAxisData,
           axisLine: { lineStyle: { color: '#e5e7eb' } },
-          axisLabel: { color: '#6b7280', fontSize: 10 },
+          axisLabel: { color: '#6b7280', fontSize: 10, interval: 'auto' },
           boundaryGap: false,
         },
         yAxis: {
           type: 'value',
-          min: 35, // 체온에 맞는 범위로 조정
-          max: 41, // 약간의 여유를 둠
-          interval: 1, // 체온에 맞는 간격
-          axisLine: { show: false },
-          axisLabel: { color: '#6b7280', fontSize: 10, formatter: '{value} °C' },
+          min: 35, // 체온에 맞는 범위
+          max: 41,
+          interval: 1,
+          axisLabel: { formatter: '{value} °C' }, // 단위 °C
           splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         tooltip: {
           trigger: 'axis',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderColor: '#e2e8f0',
-          borderWidth: 1,
-          textStyle: { color: '#1f2937', fontSize: 12 },
-          padding: [8, 12],
-          formatter: (params: any) => { // params 타입을 any 대신 ECharts 타입으로 지정하면 더 좋음
-            if (params && params.length > 0) {
-              const currentData = params[0].data;
-              return `체온: <strong>${currentData}</strong> °C`;
+          formatter: (params: any) => {
+            if (params && params.length > 0 && params[0].data !== undefined) {
+              return `체온: <strong>${params[0].data.toFixed(1)}</strong> °C`; // 🟡 소수점 한자리까지
             }
             return '';
           },
         },
         series: [{
-          data: history || [], // history가 null이면 빈 배열 사용
-          type: 'line',
-          smooth: true,
-          symbol: 'circle',
-          symbolSize: 2,
-          lineStyle: {
-            width: 2.5,
-            color: 'rgba(252, 141, 98, 1)', // 주황색 계열 (원래 코드 참조)
-          },
+          data: displayHistory,
+          type: 'line', smooth: true, symbol: 'circle', symbolSize: 2,
+          lineStyle: { width: 2.5, color: 'rgba(252, 141, 98, 1)' }, // 🟠 주황색 계열
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(252, 141, 98, 0.3)' }, // 주황색 계열 투명도
+              { offset: 0, color: 'rgba(252, 141, 98, 0.3)' },
               { offset: 1, color: 'rgba(252, 141, 98, 0.05)' },
             ]),
           },
-          itemStyle: {
-            color: 'rgba(252, 141, 98, 1)',
-          },
-          emphasis: { // 마우스 올렸을 때 강조 효과
-            focus: 'series',
-            lineStyle: { width: 3.5 },
-            itemStyle: {
-              borderWidth: 2,
-              borderColor: '#ffffff',
-              shadowBlur: 5,
-              shadowColor: 'rgba(0, 0, 0, 0.3)',
-            }
-          }
+          itemStyle: { color: 'rgba(252, 141, 98, 1)' },
+          emphasis: { focus: 'series', lineStyle: { width: 3.5 }, itemStyle: { borderWidth: 2, borderColor: '#ffffff', shadowBlur: 5, shadowColor: 'rgba(0, 0, 0, 0.3)'}}
         }],
       };
-      chartInstanceRef.current.setOption(option);
+      console.log("TemperatureCard: Setting ECharts option with displayHistory:", displayHistory, "and xAxisData:", xAxisData);
+      chartInstanceRef.current.setOption(option, { replaceMerge: ['series', 'xAxis'] });
+    } else if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+      console.log("TemperatureCard: No data to display, clearing chart.");
+      chartInstanceRef.current.clear();
     }
 
     return () => {
-      if (chartInstanceRef.current) {
+      if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+        console.log("TemperatureCard: Disposing ECharts instance.");
         chartInstanceRef.current.dispose();
         chartInstanceRef.current = null;
       }
     };
-  }, [history]);
+  }, [displayHistory, xAxisData]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.resize();
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // temperature가 null이 아닐 때만 상태 텍스트 및 색상 계산
+  // 현재 체온 상태 표시 로직 (이전 코드와 유사하게, 필요시 HeartRateCard처럼 iconBgColor, iconTextColor 추가)
   let statusText = "정상";
-  let statusTextColor = "text-green-600"; // Tailwind CSS 클래스
+  let statusTextColor = "text-green-600";
   let statusDotColor = "bg-green-500";
   let iconBgColor = "bg-green-100";
   let iconTextColor = "text-green-500";
 
-
-  // 👇 typeof로 number 타입인지 명확히 확인!
   if (typeof temperature === 'number') {
     if (temperature > 38.5) {
-      statusText = "고온 위험";
-      statusTextColor = "text-red-600";
-      statusDotColor = "bg-red-500";
-      iconBgColor = "bg-red-100";
-      iconTextColor = "text-red-500";
+      statusText = "고온 위험"; statusTextColor = "text-red-600"; statusDotColor = "bg-red-500";
+      iconBgColor = "bg-red-100"; iconTextColor = "text-red-500";
     } else if (temperature > 37.5) {
-      statusText = "주의 필요 (미열)";
-      statusTextColor = "text-yellow-500";
-      statusDotColor = "bg-yellow-500";
-      iconBgColor = "bg-yellow-100"; // 예시 (원래 코드에는 orange 계열이었음)
-      iconTextColor = "text-yellow-500";
+      statusText = "주의 필요 (미열)"; statusTextColor = "text-yellow-500"; statusDotColor = "bg-yellow-500";
+      // 이전 코드에서는 orange 계열이었는데, 일관성을 위해 yellow로 하거나, orange로 맞춰도 좋아!
+      iconBgColor = "bg-yellow-100"; iconTextColor = "text-yellow-500";
     }
-    // 원래 코드의 주황색 계열을 유지하고 싶다면 아래처럼 할 수도 있어.
-    // if (temperature > 37.5) { // 미열 기준
-    //   iconBgColor = "bg-orange-100";
-    //   iconTextColor = "text-orange-500";
-    // }
   } else {
-    // statusText = "데이터 없음"; // temperature가 null일 때 표시할 텍스트
-    // statusTextColor = "text-gray-400";
-    // statusDotColor = "bg-gray-400";
-    // iconBgColor = "bg-gray-100";
-    // iconTextColor = "text-gray-400";
+    statusText = "데이터 없음"; statusTextColor = "text-gray-400"; statusDotColor = "bg-gray-400";
+    iconBgColor = "bg-gray-100"; iconTextColor = "text-gray-400";
   }
-  // 원래 코드에서는 아이콘 배경/텍스트 색이 bg-orange-100 text-orange-500 로 고정되어 있었는데,
-  // 이것도 상태에 따라 동적으로 바뀌도록 수정했어. 만약 항상 주황색으로 하고 싶으면 이 부분을 고정하면 돼.
 
   return (
     <div className="sensor-card bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="p-4 border-b border-gray-100">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            {/* 👇 아이콘 배경색과 텍스트 색도 상태에 따라 동적으로 변경되도록 수정 */}
             <div className={`w-8 h-8 flex items-center justify-center rounded-full ${iconBgColor} ${iconTextColor} mr-3`}>
               <i className="ri-temp-hot-line"></i>
             </div>
             <h3 className="font-medium text-gray-800">체온</h3>
           </div>
           <div className="flex items-center">
-            {typeof temperature === 'number' ? temperature.toFixed(1) : '--'}
-            {/* null이면 "--", 아니면 소수점 한 자리까지 */}
             <span className="text-2xl font-bold text-gray-800 mr-2">
+              {typeof temperature === 'number' ? temperature.toFixed(1) : '--'}
             </span>
-            {/* 👈 값이 있을 때만 단위 표시 */}
             {typeof temperature === 'number' && <span className="text-sm text-gray-500">°C</span>}
           </div>
         </div>
       </div>
       <div className="p-4">
-        {(history && history.length > 0) ? (
+        {(displayHistory && displayHistory.length > 0) ? (
           <div ref={chartRef} className="w-full h-48"></div>
         ) : (
           <div className="w-full h-48 flex items-center justify-center text-sm text-gray-400">

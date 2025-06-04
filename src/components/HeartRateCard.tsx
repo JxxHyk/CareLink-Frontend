@@ -1,158 +1,164 @@
 // src/components/HeartRateCard.tsx
-import React, { useEffect, useRef } from 'react'; // React와 훅들 import
-import * as echarts from 'echarts/core'; // ECharts 핵심 라이브러리
-import { LineChart, LineSeriesOption } from 'echarts/charts'; // 라인 차트 사용
+import React, { useEffect, useRef, useState } from 'react';
+import * as echarts from 'echarts/core';
+import { LineChart, LineSeriesOption } from 'echarts/charts';
 import {
   GridComponent,
   GridComponentOption,
   TooltipComponent,
   TooltipComponentOption,
-  MarkLineComponent, // 예시로 MarkLine 추가해볼 수 있음
+  MarkLineComponent,
 } from 'echarts/components';
-import { CanvasRenderer } from 'echarts/renderers'; // Canvas 렌더러 사용
+import { CanvasRenderer } from 'echarts/renderers';
+import type { ECOption } from '@/types/echarts'; // 이전에 만든 타입 가져오기
 
-// ECharts에 필요한 컴포넌트와 차트 등록
 echarts.use([
   GridComponent,
   TooltipComponent,
   LineChart,
   CanvasRenderer,
-  MarkLineComponent, // 예시
+  MarkLineComponent,
 ]);
 
-// ECharts 옵션 타입을 위한 결합 타입 (필요한 컴포넌트 옵션들을 결합)
-type ECOption = echarts.ComposeOption<
-  | LineSeriesOption
-  | GridComponentOption
-  | TooltipComponentOption
-  // | MarkLineComponentOption // MarkLine 사용 시
->;
-
-// HeartRateCard 컴포넌트가 받을 props들의 타입을 정의
 interface HeartRateCardProps {
-  heartRate: number | null; // 현재 심박수 (null일 수 있음)
-  history: number[] | null; // 심박수 기록 배열 (null일 수 있음)
+  heartRate: number | null; // 실시간으로 업데이트될 "현재" 심박수
+  history: number[] | null; // 초기 차트 또는 전체 이력 데이터
 }
 
-const HeartRateCard = ({ heartRate, history }: HeartRateCardProps) => {
-  const chartRef = useRef<HTMLDivElement>(null); // 차트 DOM 요소를 위한 ref, 타입 명시
-  const chartInstanceRef = useRef<echarts.ECharts | null>(null); // 차트 인스턴스를 위한 ref, 타입 명시
+const MAX_DISPLAY_POINTS = 20; // 차트에 표시할 최대 데이터 포인트 수
 
+const HeartRateCard = ({ heartRate, history }: HeartRateCardProps) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+
+  const [displayHistory, setDisplayHistory] = useState<number[]>([]);
+  const [xAxisData, setXAxisData] = useState<string[]>([]);
+
+  // 1. 초기 데이터 설정 및 환자 변경 시 history prop으로 displayHistory 와 xAxisData 초기화
   useEffect(() => {
-    if (chartRef.current) {
-      // 차트 인스턴스가 없으면 초기화, 있으면 기존 인스턴스 사용
-      if (!chartInstanceRef.current) {
+    console.log("HeartRateCard: Initial history prop changed or component mounted.", history);
+    if (history && history.length > 0) {
+      const initialSlice = history.slice(-MAX_DISPLAY_POINTS);
+      setDisplayHistory(initialSlice);
+      // X축 레이블을 "P1", "P2", ..., "P<length>" 형식으로 초기화
+      setXAxisData(Array.from({ length: initialSlice.length }, (_, i) => `P${i + 1}`));
+    } else {
+      // history가 없거나 비어있으면 빈 배열로 시작
+      setDisplayHistory([]);
+      setXAxisData([]);
+    }
+  }, [history]); // history prop (즉, 선택된 환자)이 바뀔 때마다 실행
+
+  // 2. 새로운 heartRate prop 값이 들어올 때마다 displayHistory 업데이트 (슬라이딩 윈도우)
+  useEffect(() => {
+    // heartRate가 유효한 숫자일 때만 displayHistory 업데이트
+    if (typeof heartRate === 'number') {
+      console.log("HeartRateCard: New heartRate prop received:", heartRate);
+      setDisplayHistory(prevDisplayHistory => {
+        const newHistory = [...prevDisplayHistory, heartRate];
+        // MAX_DISPLAY_POINTS를 초과하면 가장 오래된 데이터 제거
+        return newHistory.length > MAX_DISPLAY_POINTS
+          ? newHistory.slice(newHistory.length - MAX_DISPLAY_POINTS)
+          : newHistory;
+      });
+    }
+  }, [heartRate]); // heartRate prop(현재값)이 바뀔 때마다 실행
+
+  // 3. displayHistory가 변경되면 xAxisData를 업데이트하는 별도의 useEffect
+  useEffect(() => {
+    console.log("HeartRateCard: displayHistory changed, updating xAxisData.", displayHistory);
+    // displayHistory의 현재 길이에 맞춰서 "P1", "P2", ... 레이블 생성
+    setXAxisData(
+      Array.from({ length: displayHistory.length }, (_, i) => `P${i + 1}`)
+    );
+  }, [displayHistory]); // displayHistory가 바뀔 때 이 effect 실행
+
+  // 4. ECharts 업데이트 (displayHistory 또는 xAxisData가 바뀔 때마다)
+  useEffect(() => {
+    if (chartRef.current && (displayHistory.length > 0 || xAxisData.length > 0)) { // 데이터가 있을 때만 차트 그림
+      if (!chartInstanceRef.current || chartInstanceRef.current.isDisposed()) { // 🟡 인스턴스가 없거나 dispose된 경우 새로 생성
+        console.log("HeartRateCard: Initializing new ECharts instance.");
         chartInstanceRef.current = echarts.init(chartRef.current);
+      } else {
+        console.log("HeartRateCard: Using existing ECharts instance.");
       }
 
       const option: ECOption = {
         animation: false,
-        grid: { top: 20, right: 20, bottom: 30, left: 45 }, // 여백 조정
+        animationDurationUpdate: 300,
+        grid: { top: 20, right: 20, bottom: 30, left: 45 },
         xAxis: {
           type: 'category',
-          data: history?.map((_, index) => index.toString()) || ['Now'], // history 길이에 맞추거나 기본값
-          // data: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', 'Now'], // 기존 고정 레이블
+          data: xAxisData,
           axisLine: { lineStyle: { color: '#e5e7eb' } },
-          axisLabel: { color: '#6b7280', fontSize: 10 },
-          boundaryGap: false, // 라인이 y축에 붙도록
+          axisLabel: { color: '#6b7280', fontSize: 10, interval: 'auto' },
+          boundaryGap: false,
         },
         yAxis: {
-          type: 'value',
-          min: 40, // 심박수 범위에 맞게 조정
-          max: 140,
-          interval: 20,
-          axisLine: { show: false },
-          axisLabel: { color: '#6b7280', fontSize: 10, formatter: '{value} bpm' },
+          type: 'value', min: 40, max: 140, interval: 20,
+          axisLabel: { formatter: '{value} bpm' },
           splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         tooltip: {
           trigger: 'axis',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderColor: '#e2e8f0',
-          borderWidth: 1,
-          textStyle: { color: '#1f2937', fontSize: 12 },
-          padding: [8, 12],
-          // params 타입을 any 대신 ECharts에서 제공하는 타입으로 지정하면 더 좋음
           formatter: (params: any) => {
-            if (params && params.length > 0) {
-              // x축 데이터(시간 등)를 params[0].axisValue 또는 params[0].name 등으로 가져올 수 있음
-              // 여기서는 간단히 현재 값만 표시하는 예시
-              const currentData = params[0].data;
-              return `심박수: <strong>${currentData}</strong> BPM`;
+            if (params && params.length > 0 && params[0].data !== undefined) { // 🟡 params[0].data 유효성 체크
+              return `심박수: <strong>${params[0].data}</strong> BPM`;
             }
             return '';
           },
         },
         series: [{
-          data: history || [], // history가 null이면 빈 배열 사용
-          type: 'line',
-          smooth: true,
-          symbol: 'circle', // 데이터 포인트 심볼
-          symbolSize: 2,   // 심볼 크기
-          lineStyle: { width: 2.5, color: '#4f46e5' }, // primary 색상 사용 (tailwind.config.js 참고)
-          areaStyle: { // 영역 색상도 primary 계열로
+          data: displayHistory,
+          type: 'line', smooth: true, symbol: 'circle', symbolSize: 2,
+          lineStyle: { width: 2.5, color: '#4f46e5' }, // Tailwind primary 색상
+          areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(79, 70, 229, 0.3)' }, // primary 색상에 투명도
+              { offset: 0, color: 'rgba(79, 70, 229, 0.3)' },
               { offset: 1, color: 'rgba(79, 70, 229, 0.05)' },
             ]),
           },
-          itemStyle: { // 데이터 포인트 스타일
-            color: '#4f46e5',
-          },
-          emphasis: { // 마우스 올렸을 때 강조 효과
-            focus: 'series',
-            lineStyle: { width: 3.5 },
-            itemStyle: {
-                borderWidth: 2,
-                borderColor: '#ffffff',
-                shadowBlur: 5,
-                shadowColor: 'rgba(0, 0, 0, 0.3)',
-            }
-          }
+          itemStyle: { color: '#4f46e5' },
+          emphasis: { focus: 'series', lineStyle: { width: 3.5 }, itemStyle: { borderWidth: 2, borderColor: '#ffffff', shadowBlur: 5, shadowColor: 'rgba(0, 0, 0, 0.3)' } }
         }],
       };
-      chartInstanceRef.current.setOption(option);
+      console.log("HeartRateCard: Setting ECharts option with displayHistory:", displayHistory, "and xAxisData:", xAxisData);
+      chartInstanceRef.current.setOption(option, { replaceMerge: ['series', 'xAxis'] }); // 🟡 시리즈와 xAxis 데이터만 교체/병합
+    } else if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+      // 데이터가 없으면 차트를 클리어하거나 기본 메시지 표시 (선택 사항)
+      console.log("HeartRateCard: No data to display, clearing chart.");
+      chartInstanceRef.current.clear(); // 또는 setOption으로 빈 차트 표시
     }
 
     // 컴포넌트 언마운트 시 차트 인스턴스 정리
     return () => {
-      if (chartInstanceRef.current) {
+      if (chartInstanceRef.current && !chartInstanceRef.current.isDisposed()) {
+        console.log("HeartRateCard: Disposing ECharts instance.");
         chartInstanceRef.current.dispose();
         chartInstanceRef.current = null;
       }
     };
-  }, [history]); // history 데이터가 변경될 때마다 차트 업데이트
+  }, [displayHistory, xAxisData]); // displayHistory나 xAxisData가 바뀔 때마다 차트 다시 그리기!
 
-  // 창 크기 변경 시 차트 리사이즈
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.resize();
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []); // 이 useEffect는 마운트/언마운트 시 한 번만 실행
-
-  // heartRate가 null이 아닐 때만 상태 텍스트 및 색상 계산
+  // 현재 심박수 상태 표시 로직
   let statusText = "정상";
-  let statusColor = "text-green-500"; // Tailwind CSS 클래스
+  let statusColor = "text-green-500";
   let statusDotColor = "bg-green-500";
+  let iconBgColor = 'bg-green-100'; // 🟡 아이콘 배경색 변수 추가
+  let iconTextColor = 'text-green-500'; // 🟡 아이콘 텍스트색 변수 추가
 
-  if (heartRate !== null) { // 👈 heartRate가 null이 아닌지 확인!
+
+  if (typeof heartRate === 'number') {
     if (heartRate > 100) {
-      statusText = "높음";
-      statusColor = "text-red-500";
-      statusDotColor = "bg-red-500";
+      statusText = "높음"; statusColor = "text-red-500"; statusDotColor = "bg-red-500";
+      iconBgColor = 'bg-red-100'; iconTextColor = 'text-red-500';
     } else if (heartRate > 85) {
-      statusText = "주의 필요";
-      statusColor = "text-yellow-500";
-      statusDotColor = "bg-yellow-500";
+      statusText = "주의 필요"; statusColor = "text-yellow-500"; statusDotColor = "bg-yellow-500";
+      iconBgColor = 'bg-yellow-100'; iconTextColor = 'text-yellow-500';
     }
   } else {
-    statusText = "데이터 없음"; // heartRate가 null일 때 표시할 텍스트
-    statusColor = "text-gray-400";
-    statusDotColor = "bg-gray-400";
+    statusText = "데이터 없음"; statusColor = "text-gray-400"; statusDotColor = "bg-gray-400";
+    iconBgColor = 'bg-gray-100'; iconTextColor = 'text-gray-400';
   }
 
   return (
@@ -160,22 +166,21 @@ const HeartRateCard = ({ heartRate, history }: HeartRateCardProps) => {
       <div className="p-4 border-b border-gray-100">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full ${heartRate !== null ? (heartRate > 100 ? 'bg-red-100 text-red-500' : heartRate > 85 ? 'bg-yellow-100 text-yellow-500' : 'bg-green-100 text-green-500') : 'bg-gray-100 text-gray-400'} mr-3`}>
+            <div className={`w-8 h-8 flex items-center justify-center rounded-full ${iconBgColor} ${iconTextColor} mr-3`}> {/* 🟡 동적 클래스 적용 */}
               <i className="ri-heart-pulse-line"></i>
             </div>
             <h3 className="font-medium text-gray-800">심박수</h3>
           </div>
           <div className="flex items-center">
             <span className="text-2xl font-bold text-gray-800 mr-2">
-              {heartRate !== null ? heartRate : '--'} {/* 👈 heartRate가 null이면 "--" 표시 */}
+              {heartRate !== null ? heartRate : '--'}
             </span>
-            {heartRate !== null && <span className="text-sm text-gray-500">BPM</span>} {/* 👈 값이 있을 때만 단위 표시 */}
+            {heartRate !== null && <span className="text-sm text-gray-500">BPM</span>}
           </div>
         </div>
       </div>
       <div className="p-4">
-        {/* 차트가 그려질 DOM 요소, history가 없거나 비어있으면 안내 메시지 표시 (선택 사항) */}
-        {(history && history.length > 0) ? (
+        {(displayHistory && displayHistory.length > 0) ? (
           <div ref={chartRef} className="w-full h-48"></div>
         ) : (
           <div className="w-full h-48 flex items-center justify-center text-sm text-gray-400">

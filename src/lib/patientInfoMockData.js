@@ -17,7 +17,7 @@ export const initialPatientProfiles = [ // 변수 이름도 변경
     movementPattern: "정상",
     gps: { lat: "37.7749° N", long: "122.4194° W", address: "테스트 병원", timestamp: "10분 전"},
     organization_id: 1,
-    patient_code: "P-ORG1-001"
+    patient_code: "Test-001"
   },
   // ... (기관 ID 1번 사용자가 볼 다른 목업 환자들)
 ];
