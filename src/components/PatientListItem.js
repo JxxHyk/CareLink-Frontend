@@ -43,7 +43,7 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
             <i className={`${riskIcon} mr-1 text-xs ${riskColorClass}`}></i>
             <span className={`text-xs ${riskColorClass}`}>{riskText}</span>
           </div>
-          <span className="text-xs text-gray-400">Updated {patient.lastUpdated}</span>
+          {/* <span className="text-xs text-gray-400">Updated {patient.lastUpdated}</span> */}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 mt-3">
