@@ -220,8 +220,8 @@ function DashboardView({ onLogout, currentUser, authToken }: {
         // 위험도 업데이트 (예시)
         let updatedRisk: Patient['risk'] = patient.risk;
         if ((newHeartRate ?? 0) > 100 || (newTemperature ?? 0) > 38.5) updatedRisk = 'high';
-        else if ((newHeartRate ?? 0) > 85 || (newTemperature ?? 0) > 37.5) updatedRisk = 'medium';
         else if ((newHeartRate ?? 0) < 55 || (newTemperature ?? 0) <= 35.7) updatedRisk = 'high';
+        else if ((newHeartRate ?? 0) > 85 || (newTemperature ?? 0) > 37.5) updatedRisk = 'medium';
         else if (((newHeartRate ?? 0) < 60 && (newHeartRate ?? 0) >= 55) || (newTemperature ?? 0) <= 36.0 ) updatedRisk = 'medium';
         else updatedRisk = 'low';
 

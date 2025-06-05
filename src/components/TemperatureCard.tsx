@@ -143,11 +143,11 @@ const TemperatureCard = ({ currentValue, historyData }: TemperatureCardProps) =>
   let iconBgColor = "bg-green-100"; //
   let iconTextColor = "text-green-500"; //
 
-  if (typeof currentValue === 'number') { // 👈 temperature를 currentValue로 변경
-    if (currentValue > 38.5) {
+  if (typeof currentValue === 'number') { 
+    if (currentValue >= 38.0) {
       statusText = "고온 위험"; statusTextColor = "text-red-600"; statusDotColor = "bg-red-500";
       iconBgColor = "bg-red-100"; iconTextColor = "text-red-500";
-    } else if (currentValue > 37.5) {
+    } else if (currentValue >= 37.5) {
       statusText = "주의 필요 (미열)"; statusTextColor = "text-yellow-500"; statusDotColor = "bg-yellow-500";
       iconBgColor = "bg-yellow-100"; iconTextColor = "text-yellow-500";
     } else if (currentValue < 37.5 && currentValue > 36.0) {
