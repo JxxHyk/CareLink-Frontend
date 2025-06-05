@@ -1,61 +1,67 @@
-// components/PatientDetail.js
-import HeartRateCard from './HeartRateCard';
-import TemperatureCard from './TemperatureCard';
-import FallDetectionCard from './FallDetectionCard';
-import GPSCard from './GPSCard';
-import AlertHistory from './AlertHistory';
+// src/components/PatientDetail.js
+import HeartRateCard from './HeartRateCard'; //
+import TemperatureCard from './TemperatureCard'; //
+import FallDetectionCard from './FallDetectionCard'; //
+import GPSCard from './GPSCard'; //
+import AlertHistory from './AlertHistory'; //
 
 const PatientDetail = ({ patient }) => {
   if (!patient) {
-    return <div className="p-6">환자 정보가 없습니다.</div>;
+    return <div className="p-6">환자 정보가 없습니다.</div>; //
   }
 
+  // patient 객체에서 필요한 값을 명시적으로 추출하거나, 직접 patient.field 형태로 사용
+  const {
+    full_name,
+    patient_code,
+    date_of_birth,
+    // 센서 카드에 전달할 값들
+    current_heart_rate,
+    heart_rate_history,
+    current_temperature,
+    temperature_history,
+    // 다른 카드용 데이터
+    gyro,
+    lastMovement,
+    movementPattern,
+    current_fall_status, // API 응답의 필드명과 Patient 타입을 일치시켜야 함
+    gps
+  } = patient;
+
   return (
-    <div className="p-6 flex-1 overflow-y-auto scrollbar-hide">
-      <div className="flex justify-between items-start mb-6">
+    <div className="p-6 flex-1 overflow-y-auto scrollbar-hide"> {/* */}
+      <div className="flex justify-between items-start mb-6"> {/* */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">{patient.full_name}</h2>
-          <div className="flex items-center mt-1">
-            <span className="text-sm text-gray-500 mr-4">ID: {patient.patient_code}</span>
-            <span className="text-sm text-gray-500 mr-4">생년월일: {patient.date_of_birth}</span>
-            {/* <span className="text-sm text-gray-500">Room: {patient.room}</span> */}
+          <h2 className="text-2xl font-bold text-gray-800">{full_name}</h2> {/* */}
+          <div className="flex items-center mt-1"> {/* */}
+            <span className="text-sm text-gray-500 mr-4">ID: {patient_code}</span> {/* */}
+            <span className="text-sm text-gray-500 mr-4">생년월일: {date_of_birth ? new Date(date_of_birth).toLocaleDateString() : 'N/A'}</span> {/* */}
           </div>
         </div>
-        <div className="flex space-x-2">
-          {/* 버튼들 ... */}
-          <button className="px-3 py-2 bg-white border border-gray-300 rounded-button text-gray-700 hover:bg-gray-50 whitespace-nowrap">
-            <i className="ri-history-line mr-1"></i>이력
-          </button>
-          <button className="px-3 py-2 bg-white border border-gray-300 rounded-button text-gray-700 hover:bg-gray-50 whitespace-nowrap">
-            <i className="ri-file-list-3-line mr-1"></i>의료 특이사항
-          </button>
-          <button className="px-3 py-2 bg-red-100 border border-red-200 rounded-button text-red-600 hover:bg-red-200 whitespace-nowrap">
-            <i className="ri-alarm-warning-line mr-1"></i>응급상황
-          </button>
-        </div>
+        {/* 버튼들 ... */}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"> {/* */}
         <HeartRateCard
-          heartRate={patient.heartRate}
-          history={patient.heartRateHistory || []} // mockData에 history 추가 필요
+          currentValue={current_heart_rate ?? null}
+          historyData={heart_rate_history || []}
         />
         <TemperatureCard
-          temperature={patient.temperature}
-          history={patient.temperatureHistory || []} // mockData에 history 추가 필요
+          currentValue={current_temperature ?? null} // ✨ TemperatureCard도 동일하게 수정 필요
+          historyData={temperature_history || []}   // ✨ TemperatureCard도 동일하게 수정 필요
         />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <FallDetectionCard
-            gyro={patient.gyro || {x:0,y:0,z:0}}
-            lastMovement={patient.lastMovement || 'N/A'}
-            movementPattern={patient.movementPattern || 'N/A'}
-            fallStatus={patient.fallStatus}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"> {/* */}
+        <FallDetectionCard //
+            gyro={gyro || {x:0,y:0,z:0}} //
+            lastMovement={lastMovement || 'N/A'} //
+            movementPattern={movementPattern || 'N/A'} //
+            fallStatus={current_fall_status} //
         />
-        <GPSCard gpsData={patient.gps}/>
+        <GPSCard gpsData={gps}/> {/* */}
       </div>
 
-      <AlertHistory /> {/* AlertHistory는 일단 고정된 내용으로 */}
+      <AlertHistory /> {/* */}
     </div>
   );
 };

@@ -57,7 +57,7 @@ export interface UserProfile extends TimestampFields {
   email: string | null;
   full_name: string | null;
   phone_number: string | null;
-  user_type: UserRole; // ✨ UserRole Enum 사용
+  user_type: UserRole.STAFF; // ✨ UserRole Enum 사용
   status: UserStatus; // ✨ UserStatus Enum 사용
   
   organization_id: number;
@@ -66,36 +66,56 @@ export interface UserProfile extends TimestampFields {
   is_superuser: boolean | null;
 }
 
-/**
- * @description ERD: Patients 테이블 인터페이스 (백엔드 Patient 스키마 반영)
- */
 export interface Patient extends TimestampFields {
   patient_id: number; // PK
   organization_id: number; // FK
-  patient_code: string;
-  full_name: string;
-  date_of_birth?: string | null;
+  patient_code: string; //
+  full_name: string; //
+  date_of_birth?: string | null; //
   gender?: Gender | string | null; // ✨ Gender Enum 사용
-  address?: string | null;
-  contact_number?: string | null;
-  emergency_contact?: string | null;
-  emergency_number?: string | null;
-  medical_notes?: string | null;
+  address?: string | null; //
+  contact_number?: string | null; //
+  emergency_contact?: string | null; //
+  emergency_number?: string | null; //
+  medical_notes?: string | null; //
   status?: PatientStatus | string | null; // ✨ PatientStatus Enum 사용
-  registration_date?: string | null;
+  registration_date?: string | null; //
 
-  // ... (현재 센서 값 필드들은 동일) ...
-  current_heart_rate?: number | null;
-  current_temperature?: number | null;
-  current_fall_status?: 'normal' | 'alert' | string | null; // fallStatus는 FallDetectionStatus Enum으로 변경 고려
-  // ... (나머지 current_ 센서 필드들) ...
+  // 현재 센서 값 필드들
+  current_heart_rate?: number | null; //
+  current_temperature?: number | null; //
+  current_fall_status?: 'normal' | 'alert' | string | null; //
+  
+  // 👇 누락된 센서 필드들 추가
+  current_gps_latitude?: number | null;
+  current_gps_longitude?: number | null;
+  current_step_count?: number | null;
+  current_acceleration_x?: number | null;
+  current_acceleration_y?: number | null;
+  current_acceleration_z?: number | null;
+  current_gyro_x?: number | null;
+  current_gyro_y?: number | null;
+  current_gyro_z?: number | null;
+  current_battery_level?: number | null;
+  // 👆 누락된 센서 필드들 추가 완료
 
-  // ... (시계열 히스토리 데이터 필드들은 동일) ...
+  // 시계열 히스토리 데이터 필드 (타입이 number[] | undefined 또는 number[] | null 로 되어 있는지 확인)
+  heart_rate_history?: number[]; //
+  temperature_history?: number[]; //
+  acceleration_history?: { x: number; y: number; z: number; timestamp: string }[]; //
+  gyro_history?: { x: number; y: number; z: number; timestamp: string }[]; //
+  gps_history?: { lat: number; long: number; address?: string; timestamp: string }[]; // gps_history에 address 추가
 
-  // ... (프론트엔드에서 계산/표시용 필드들은 동일) ...
-  age?: number | null;
-  risk?: 'high' | 'medium' | 'low' | null;
-  lastUpdated?: string | null;
+  // 프론트엔드 계산/표시용 필드들
+  age?: number | null; //
+  risk?: 'high' | 'medium' | 'low' | null; //
+  lastUpdated?: string | null; //
+
+  // 특정 컴포넌트에서 사용될 수 있는 구조화된 데이터
+  gyro?: { x: number; y: number; z: number; }; //
+  lastMovement?: string | null; //
+  movementPattern?: string | null; //
+  gps?: { lat?: string; long?: string; address?: string; timestamp?: string; } | null; //
 }
 
 /**
