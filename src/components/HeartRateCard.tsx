@@ -127,11 +127,11 @@ const HeartRateCard = ({ currentValue, historyData }: HeartRateCardProps) => {
           smooth: true,
           symbol: 'none', // 데이터 포인트에 심볼 표시 안 함 (실시간처럼 보이게)
           // symbolSize: 2,
-          lineStyle: { width: 2.5, color: '#4f46e5' }, // Tailwind primary 색상
+          lineStyle: { width: 2.5, color: 'rgba(156, 230, 99, 0.8)' }, // Tailwind primary 색상
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(79, 70, 229, 0.3)' },
-              { offset: 1, color: 'rgba(79, 70, 229, 0.05)' },
+              { offset: 0, color: 'rgba(107, 143, 79, 0.2)' },
+              { offset: 1, color: 'rgba(107, 143, 79, 0.05)' },
             ]),
           },
           // itemStyle: { color: '#4f46e5' }, // symbol: 'none'이면 크게 의미 없음
@@ -166,10 +166,10 @@ const HeartRateCard = ({ currentValue, historyData }: HeartRateCardProps) => {
     } else if (currentValue > 85) { // 60~85는 정상 범위로 간주 (일반적인 성인 안정 시)
       statusText = "주의 필요"; statusColor = "text-yellow-500"; statusDotColor = "bg-yellow-500";
       iconBgColor = 'bg-yellow-100'; iconTextColor = 'text-yellow-500';
-    } else if (currentValue < 60 && currentValue >= 40) { // 60 미만도 주의 (상황에 따라 다름)
-      statusText = "낮음"; statusColor = "text-blue-500"; statusDotColor = "bg-blue-500";
+    } else if (currentValue < 60 && currentValue >= 55) {
+      statusText = "주의 필요"; statusColor = "text-blue-500"; statusDotColor = "bg-blue-500";
       iconBgColor = 'bg-blue-100'; iconTextColor = 'text-blue-500';
-    } else if (currentValue < 40) {
+    } else if (currentValue < 55) {
       statusText = "매우 낮음"; statusColor = "text-red-500"; statusDotColor = "bg-red-500";
       iconBgColor = 'bg-red-100'; iconTextColor = 'text-red-500';
     }

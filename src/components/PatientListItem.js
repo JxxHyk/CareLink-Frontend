@@ -34,7 +34,6 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
             <h3 className="font-medium text-gray-800">{patient.full_name}</h3>
             <div className="flex items-center text-xs text-gray-500 mt-0.5">
               <span className="mr-2">ID: {patient.patient_code}</span>
-              {/* <span>Room: {patient.room}</span> */}
             </div>
           </div>
         </div>
@@ -43,7 +42,6 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
             <i className={`${riskIcon} mr-1 text-xs ${riskColorClass}`}></i>
             <span className={`text-xs ${riskColorClass}`}>{riskText}</span>
           </div>
-          {/* <span className="text-xs text-gray-400">Updated {patient.lastUpdated}</span> */}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 mt-3">
@@ -55,7 +53,7 @@ const PatientListItem = ({ patient, onSelectPatient, isSelected }) => {
             <span className="text-xs text-gray-500">Heart</span>
             <div className="flex items-center">
               <span className="text-sm font-medium text-gray-800">
-                {patient.heartRate !== null ? patient.heartRate : '--'} {/* 👈 null이면 "--" 표시 */}
+                {patient.heartRate !== null ? patient.heartRate : '--'}
               </span>
               <span className="text-xs text-gray-500 ml-1">BPM</span>
             </div>

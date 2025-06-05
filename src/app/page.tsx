@@ -22,7 +22,7 @@ import PatientList from '@/components/PatientList'; //
 import PatientDetail from '@/components/PatientDetail'; //
 import { timeSeriesData } from '@/lib/timeSeriesMockData'; //
 
-const SIMULATION_INTERVAL = 1000; // 센서 값 업데이트 주기 (ms) - 예: 2초
+const SIMULATION_INTERVAL = 1000; // 센서 값 업데이트 주기 (ms)
 
 // fetchAllPatientsFromAPI 함수는 이전 단계에서 정의한 것을 그대로 사용한다고 가정
 async function fetchAllPatientsFromAPI(token: string | null, organizationInfo: IdNamePair | undefined | null): Promise<Patient[]> {
@@ -221,6 +221,8 @@ function DashboardView({ onLogout, currentUser, authToken }: {
         let updatedRisk: Patient['risk'] = patient.risk;
         if ((newHeartRate ?? 0) > 100 || (newTemperature ?? 0) > 38.5) updatedRisk = 'high';
         else if ((newHeartRate ?? 0) > 85 || (newTemperature ?? 0) > 37.5) updatedRisk = 'medium';
+        else if ((newHeartRate ?? 0) < 55 || (newTemperature ?? 0) <= 35.7) updatedRisk = 'high';
+        else if (((newHeartRate ?? 0) < 60 && (newHeartRate ?? 0) >= 55) || (newTemperature ?? 0) <= 36.0 ) updatedRisk = 'medium';
         else updatedRisk = 'low';
 
         return {
