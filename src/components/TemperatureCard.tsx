@@ -40,7 +40,7 @@ const TemperatureCard = ({ temperature, history }: TemperatureCardProps) => {
     if (history && history.length > 0) {
       const initialSlice = history.slice(-MAX_DISPLAY_POINTS);
       setDisplayHistory(initialSlice);
-      setXAxisData(Array.from({ length: initialSlice.length }, (_, i) => `P${i + 1}`));
+      setXAxisData(Array.from({ length: initialSlice.length }, (_, i) => `${i + 1}`));
     } else {
       setDisplayHistory([]);
       setXAxisData([]);
@@ -64,7 +64,7 @@ const TemperatureCard = ({ temperature, history }: TemperatureCardProps) => {
   useEffect(() => {
     console.log("TemperatureCard: displayHistory changed, updating xAxisData.", displayHistory);
     setXAxisData(
-      Array.from({ length: displayHistory.length }, (_, i) => `P${i + 1}`)
+      Array.from({ length: displayHistory.length }, (_, i) => `${i + 1}`)
     );
   }, [displayHistory]);
 
@@ -91,8 +91,8 @@ const TemperatureCard = ({ temperature, history }: TemperatureCardProps) => {
         },
         yAxis: {
           type: 'value',
-          min: 35, // 체온에 맞는 범위
-          max: 41,
+          min: 34, // 체온에 맞는 범위
+          max: 40,
           interval: 1,
           axisLabel: { formatter: '{value} °C' }, // 단위 °C
           splitLine: { lineStyle: { color: '#f3f4f6' } },

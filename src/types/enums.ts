@@ -1,86 +1,94 @@
 // src/types/enums.ts
 
-// 사용자 역할 타입
-// 백엔드 UserType Enum: ADMIN = "admin", STAFF = "staff", SUPER_ADMIN = "super_admin"
+// 백엔드 app/models/enums.py와 일치하도록 정의합니다.
+
+// 사용자 역할 타입 (백엔드: UserType)
 export enum UserRole {
-  SUPER_ADMIN = "super_admin",
   ADMIN = "admin",
   STAFF = "staff",
+  SUPER_ADMIN = "super_admin",
 }
-// UserRoleType은 문자열 리터럴 유니온 타입으로도 사용할 수 있어.
-// export type UserRoleType = "super_admin" | "admin" | "staff";
 
-// 사용자 계정 상태 타입
-// 백엔드 UserStatus Enum: ACTIVE = "active", INACTIVE = "inactive", SUSPENDED = "suspended", PENDING_APPROVAL = "pending_approval"
-export enum AccountStatus {
+// 사용자 계정 상태 타입 (백엔드: UserStatus)
+export enum UserStatus { // ✨ AccountStatus 대신 백엔드 이름인 UserStatus로 변경
   ACTIVE = "active",
   INACTIVE = "inactive",
   SUSPENDED = "suspended",
   PENDING_APPROVAL = "pending_approval",
 }
-// export type AccountStatusType = "active" | "inactive" | "suspended" | "pending_approval";
 
-// 기관 상태 타입
-// 백엔드 OrganizationStatus Enum: ACTIVE = "active", INACTIVE = "inactive", SUSPENDED = "suspended"
+// 기관 상태 타입 (백엔드: OrganizationStatus)
 export enum OrganizationStatus {
   ACTIVE = "active",
   INACTIVE = "inactive",
   SUSPENDED = "suspended",
 }
-// export type OrgStatusType = "active" | "inactive" | "suspended";
 
-// 환자 성별 타입
-// 백엔드 Gender Enum: MALE = "male", FEMALE = "female", OTHER = "other"
+// 환자 성별 타입 (백엔드: Gender)
 export enum Gender {
   MALE = "male",
   FEMALE = "female",
   OTHER = "other",
 }
-// export type GenderType = "male" | "female" | "other";
 
-// 환자 상태 타입
-// 백엔드 PatientStatus Enum: ACTIVE = "active", INACTIVE = "inactive", DISCHARGED = "discharged"
+// 환자 상태 타입 (백엔드: PatientStatus)
 export enum PatientStatus {
   ACTIVE = "active",
   INACTIVE = "inactive",
   DISCHARGED = "discharged",
 }
-// export type PatientConditionType = "active" | "inactive" | "discharged";
 
-
-// 기기 상태 타입 (예시)
-// 백엔드 Device 모델에 status Enum이 있다면 그에 맞춰서
-export enum DeviceConnectionStatus {
+// 기기 상태 타입 (백엔드: DeviceStatus)
+export enum DeviceStatus { // ✨ DeviceConnectionStatus 대신 백엔드 이름인 DeviceStatus로 변경
   ACTIVE = "active",
   INACTIVE = "inactive",
   DISCONNECTED = "disconnected",
   MAINTENANCE = "maintenance",
 }
-// export type DeviceConnectionStatusType = "active" | "inactive" | "disconnected" | "maintenance";
 
-
-// 낙상 상태 타입 (예시 - Patient 인터페이스의 fallStatus와 연관)
-export enum FallDetectionStatus {
-    NORMAL = "normal",
-    ALERT = "alert",
-}
-// export type FallDetectionStatusType = "normal" | "alert";
-
-
-// 알림 유형 (예시 - HealthAlerts 모델과 연관)
-export enum AlertType {
-    HEART_RATE_HIGH = "heart_rate_high",
-    HEART_RATE_LOW = "heart_rate_low",
-    TEMPERATURE_HIGH = "temperature_high",
-    TEMPERATURE_LOW = "temperature_low",
-    FALL_DETECTED = "fall_detected",
+// 알림 유형 (백엔드: AlertType)
+export enum AlertType { // ✨ HealthAlertType 대신 백엔드 이름인 AlertType으로 변경
+  HEART_RATE_HIGH = "heart_rate_high",
+  HEART_RATE_LOW = "heart_rate_low",
+  TEMPERATURE_HIGH = "temperature_high",
+  TEMPERATURE_LOW = "temperature_low",
+  FALL_DETECTED = "fall_detected",
 }
 
-// 알림 심각도 (예시 - HealthAlerts 모델과 연관)
+// 알림 심각도 (백엔드: AlertSeverity)
 export enum AlertSeverity {
-    CRITICAL = "critical",
-    WARNING = "warning",
-    INFO = "info",
+  CRITICAL = "critical",
+  WARNING = "warning",
+  INFO = "info",
 }
 
-// 여기에 네 프로젝트에서 공통으로 사용될 다른 Enum이나 Union 타입들을 추가하면 돼!
+// ✨ 프론트엔드에서만 사용되거나, 백엔드 다른 곳에 정의된 Enum이라면 여기에 유지
+// (예: HealthMetricType, EventType, NotificationMethod - ERD 기반)
+// 만약 백엔드에도 동일한 Enum이 있다면, 백엔드와 일치시키거나 백엔드에서 내려주는 string 값을 직접 사용해야 합니다.
+export enum NotificationMethod {
+  EMAIL = "email",
+  SMS = "sms",
+  APP_PUSH = "app_push",
+  CALL = "call",
+}
+
+export enum HealthMetricType {
+  HEART_RATE = "heart_rate",
+  TEMPERATURE = "temperature",
+  ACCELERATION = "acceleration",
+  GYROSCOPE = "gyroscope",
+  STEP_COUNT = "step_count",
+  LOCATION = "location",
+}
+
+export enum EventType {
+  LOGIN = "login",
+  LOGOUT = "logout",
+  DATA_COLLECTION = "data_collection",
+  ALERT_TRIGGERED = "alert_triggered",
+  ALERT_ACKNOWLEDGED = "alert_acknowledged",
+  DEVICE_PAIR = "device_pair",
+  DEVICE_UNPAIR = "device_unpair",
+  USER_CREATE = "user_create",
+  PATIENT_CREATE = "patient_create",
+}

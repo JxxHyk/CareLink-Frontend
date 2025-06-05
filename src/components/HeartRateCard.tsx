@@ -41,7 +41,7 @@ const HeartRateCard = ({ heartRate, history }: HeartRateCardProps) => {
       const initialSlice = history.slice(-MAX_DISPLAY_POINTS);
       setDisplayHistory(initialSlice);
       // X축 레이블을 "P1", "P2", ..., "P<length>" 형식으로 초기화
-      setXAxisData(Array.from({ length: initialSlice.length }, (_, i) => `P${i + 1}`));
+      setXAxisData(Array.from({ length: initialSlice.length }, (_, i) => `${i + 1}`));
     } else {
       // history가 없거나 비어있으면 빈 배열로 시작
       setDisplayHistory([]);
@@ -69,7 +69,7 @@ const HeartRateCard = ({ heartRate, history }: HeartRateCardProps) => {
     console.log("HeartRateCard: displayHistory changed, updating xAxisData.", displayHistory);
     // displayHistory의 현재 길이에 맞춰서 "P1", "P2", ... 레이블 생성
     setXAxisData(
-      Array.from({ length: displayHistory.length }, (_, i) => `P${i + 1}`)
+      Array.from({ length: displayHistory.length }, (_, i) => `${i + 1}`)
     );
   }, [displayHistory]); // displayHistory가 바뀔 때 이 effect 실행
 
@@ -96,7 +96,7 @@ const HeartRateCard = ({ heartRate, history }: HeartRateCardProps) => {
         },
         yAxis: {
           type: 'value', min: 40, max: 140, interval: 20,
-          axisLabel: { formatter: '{value} bpm' },
+          axisLabel: { formatter: '{value}' },
           splitLine: { lineStyle: { color: '#f3f4f6' } },
         },
         tooltip: {

@@ -1,36 +1,28 @@
 // src/components/SubHeader.tsx
 import React from 'react';
-import type { User, OrganizationInfo, UserRoleType } from '@/types';
-
-// // User 및 OrganizationInfo 인터페이스 정의 또는 import
-// // Layout.tsx와 동일한 User 타입을 사용해야 함!
-// interface OrganizationInfo {
-//   id: number;
-//   name: string;
-// }
-
-// // User 타입을 여기서도 정의하거나 import
-// interface User {
-//   name: string;
-//   role: UserRoleType;
-//   organization?: OrganizationInfo | null;
-// }
+import { CurrentUser } from '@/types'; // 인터페이스는 index.ts에서 가져옴
+import { UserRole } from '@/types/enums'; // ✨ UserRole은 enums.ts에서 가져옴
 
 // 역할 코드에 따른 한국어 이름 매핑 객체
-const roleDisplayNames: { [key in UserRoleType]?: string } = {
-  "super_admin": "시스템 관리자",
-  "admin": "관리자",
-  "staff": "직원"
+// ✨ UserRole Enum을 키 타입으로 사용
+const roleDisplayNames: { [key in UserRole]?: string } = {
+  [UserRole.SUPER_ADMIN]: "시스템 관리자",
+  [UserRole.ADMIN]: "관리자",
+  [UserRole.STAFF]: "보호자",
 };
 
 interface SubHeaderProps {
-  currentUser: User | null;
+  // ✨ currentUser의 타입을 User | null 에서 CurrentUser | null 로 변경
+  currentUser: CurrentUser | null;
 }
 
 const SubHeader = ({ currentUser }: SubHeaderProps) => {
-  const displayName = currentUser ? currentUser.name : '사용자'; // 기본값 설정
-  const displayRole = currentUser?.role ? (roleDisplayNames[currentUser.role] || '담당자') : '정보 없음';
-
+  // CurrentUser 타입에는 full_name이 있으므로 name 대신 full_name 사용을 고려.
+  // 아니면 CurrentUser 타입에 name 필드를 추가하여 일관성 유지.
+  // 여기서는 일단 기존 코드의 displayName 로직에 맞춰 full_name을 사용하도록 함.
+  const displayName = currentUser ? currentUser.full_name : '사용자'; // 기본값 설정
+  // ✨ currentUser.user_type을 사용하여 roleDisplayNames에서 매핑
+  const displayRole = currentUser?.user_type ? (roleDisplayNames[currentUser.user_type] || '담당자') : '정보 없음';
 
   return (
     <header className="bg-white border-b border-gray-200 py-3 px-6 flex justify-between items-center">
