@@ -35,7 +35,7 @@ CareLink-Frontend/
 │   │   │   └── page.tsx
 │   │   └── settings
 │   ├── components
-│   │   ├── AlertHistory.js
+│   │   ├── AlertHistory.tsx
 │   │   ├── EmergencyManualModal.tsx
 │   │   ├── FallDetectionCard.tsx
 │   │   ├── GPSCard.tsx
@@ -44,13 +44,14 @@ CareLink-Frontend/
 │   │   ├── LoginPage.tsx
 │   │   ├── MedicalNotesModal.tsx
 │   │   ├── Navbar.tsx
-│   │   ├── PatientDetail.js
+│   │   ├── PatientDetail.tsx
 │   │   ├── PatientList.tsx
-│   │   ├── PatientListItem.js
+│   │   ├── PatientListItem.tsx
 │   │   ├── StatusUpdateModal.tsx
 │   │   ├── SubHeader.tsx
 │   │   └── TemperatureCard.tsx
 │   ├── lib
+│   │   ├── api.ts
 │   │   └── timeSeriesMockData.js
 │   └── types
 │       ├── echarts.ts
