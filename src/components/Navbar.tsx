@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { CurrentUser, IdNamePair } from '@/types';
+import { CurrentUser } from '@/types';
 import { UserType } from '@/types/enums'; // ✨ UserType Enum import!
 
 interface NavbarProps {

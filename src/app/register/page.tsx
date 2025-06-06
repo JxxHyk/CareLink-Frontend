@@ -5,11 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-// import type { CurrentUser, UserProfile } from '@/types';
-import { UserType } from '@/types/enums'; // UserType import
-
-// ✨ 새로 만든 api.ts 파일에서 인증 관련 함수들을 import
-import { registerUser } from '@/lib/api';
+import { UserType } from '@/types/enums';
+import { registerUser } from '@/lib/api'; // registerUser 함수는 useAuth에 포함시키지 않고 api.ts에서 직접 호출
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -20,7 +17,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [organizationId, setOrganizationId] = useState('');
-  const [userType, setUserType] = useState('staff'); // UserType Enum 값 사용
+  const [userType, setUserType] = useState('staff');
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -41,19 +38,17 @@ export default function RegisterPage() {
     const registrationData = {
       username,
       email: email === '' ? null : email,
-      password, // Password는 실제 프로덕션에서는 해싱해서 보내야 하지만, 일단 스키마에 맞춰
+      password,
       full_name: fullName === '' ? null : fullName,
       phone_number: phoneNumber === '' ? null : phoneNumber,
       organization_id: parseInt(organizationId, 10),
-      user_type: userType as UserType, // UserType Enum으로 캐스팅
+      user_type: userType as UserType,
     };
 
     try {
-      // api.ts의 registerUser 함수 사용
-      await registerUser(registrationData); // ✨ 변경된 부분!
+      await registerUser(registrationData);
 
       setSuccessMessage('회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
-      // 필드 초기화
       setUsername('');
       setEmail('');
       setPassword('');

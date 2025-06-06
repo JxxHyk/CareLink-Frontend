@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from 'react';
-import Image from 'next/image'; // 로고 이미지를 사용한다면
 
 // MainPage로 전달할 사용자 정보 타입 (FastAPI의 UserSchema와 유사하게 정의)
 interface UserDataForApp {

@@ -1,21 +1,11 @@
-// src/lib/api.ts
-import { Patient, UserProfile, IdNamePair, ApiErrorResponse } from '@/types'; // 필요한 타입들 import
-import { PatientStatus, UserType } from '@/types/enums'; // 필요한 Enum들 import
-import { NextRouter } from 'next/router'; // useRouter의 타입을 위해 import (next/navigation의 useRouter는 NextRouter 타입이 아님)
+// src/lib/api.ts (기존 내용에서 fetchAllPatientsFromAPI 관련 함수를 삭제하고 fetchPatients로 통합)
 
-// Next.js 13+의 useRouter는 NextRouter 타입이 아니라 AppRouterInstance 타입이야.
-// 그래서 router.replace를 사용할 때 타입을 맞춰줘야 해.
-// 여기서는 임시적으로 any로 두거나, 정확한 타입을 import해서 사용해야 해.
-// App Router에서 useRouter는 'next/navigation'에서 가져오고, 이는 NextRouter가 아님.
-// 따라서 아래의 router: NextRouter는 정확하지 않고, router: any 또는 AppRouterInstance 타입이어야 해.
-// 하지만 이 api.ts 파일은 순수 로직만 담고 next/navigation에 직접 의존하지 않는 것이 좋으니,
-// router를 인자로 받을 때 이 api 함수를 호출하는 곳에서 (즉, 컴포넌트에서) router를 바인딩해서 넘기거나,
-// 이 함수 내부에서 router를 직접 사용하지 않도록 설계하는 것이 더 좋아.
-// 일단은 router를 인자로 받고, 해당 인자를 쓰는 함수들이 router의 replace 메서드를 호출할 수 있도록 해보자.
+import { Patient, UserProfile, ApiErrorResponse } from '@/types';
+import { PatientStatus, UserType } from '@/types/enums';
+// import { NextRouter } from 'next/router'; // 이제 NextRouter는 더 이상 사용하지 않음
 
 interface CustomRouterForApi {
   replace: (path: string) => void;
-  // 필요한 다른 router 메서드가 있다면 여기에 추가
 }
 
 const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
@@ -26,14 +16,14 @@ async function handleApiResponse<T>(response: Response, router?: CustomRouterFor
     console.error("인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
     if (typeof window !== "undefined") {
       localStorage.clear();
-      if (router) { // router가 제공되었다면 사용
+      if (router) {
         router.replace('/login');
       } else {
         // router가 제공되지 않은 경우, window.location.href 사용 (Server Component 등에서)
         window.location.href = '/login';
       }
     }
-    throw new Error("Unauthorized"); // 에러를 던져서 호출자가 catch하도록 함
+    throw new Error("Unauthorized");
   }
 
   if (!response.ok) {
@@ -74,7 +64,6 @@ export async function logoutUser(token: string): Promise<void> {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` },
   });
-  // 로그아웃은 응답 본문이 없을 수 있으므로 status만 체크
   if (!response.ok) {
     console.error("로그아웃 API 실패:", response.status, await response.text());
     throw new Error("Logout failed");
@@ -90,11 +79,11 @@ interface RegisterUserResponse {
 interface RegisterUserData {
   username: string;
   email?: string | null;
-  password?: string; // 보안상 비밀번호를 그대로 보내지 않지만, 스키마에 따라 일단 둠
+  password?: string;
   full_name?: string | null;
   phone_number?: string | null;
   organization_id: number;
-  user_type: UserType; // UserType Enum 사용
+  user_type: UserType;
 }
 
 export async function registerUser(data: RegisterUserData): Promise<RegisterUserResponse> {
@@ -108,15 +97,14 @@ export async function registerUser(data: RegisterUserData): Promise<RegisterUser
 
 // -------------------- 환자 관련 API --------------------
 
+// fetchPatients 함수를 이제 직접 API 응답을 Patient 타입에 맞게 매핑하도록 할게.
 export async function fetchPatients(token: string, organizationId: number, router?: CustomRouterForApi): Promise<Patient[]> {
   const response = await fetch(`${BASE_API_URL}/api/v1/patients/?organization_id=${organizationId}`, {
     method: 'GET',
     headers: { 'Authorization': `Bearer ${token}` },
   });
-  const data = await handleApiResponse<any[]>(response, router); // 일단 any[]로 받고, 매핑은 호출하는 쪽에서
-  
-  // API 응답 형태를 Patient 타입에 맞게 매핑 (여기서 할 수도 있고, 호출하는 곳에서 할 수도 있음)
-  // 여기서는 API 계층에서 최대한 클라이언트 모델에 맞추는 것을 목표로 함.
+  const data = await handleApiResponse<any[]>(response, router);
+
   return data.map(apiPatient => ({
     patient_id: apiPatient.patient_id,
     organization_id: apiPatient.organization_id,
@@ -167,7 +155,6 @@ export async function fetchPatientById(patientId: string | number, token: string
     headers: { 'Authorization': `Bearer ${token}` },
   });
   const data = await handleApiResponse<any>(response, router);
-  // 단일 환자 응답도 Patient 타입에 맞게 매핑
   return {
     patient_id: data.patient_id,
     organization_id: data.organization_id,
@@ -218,20 +205,17 @@ export async function deletePatient(patientId: number, token: string, router?: C
     headers: { 'Authorization': `Bearer ${token}` },
   });
   try {
-    // 204 No Content는 본문이 없으므로 json 파싱 시도하지 않음
     if (response.status === 204) {
       return true;
     }
-    // 다른 성공적인 2xx 응답도 처리할 수 있도록 handleApiResponse 사용
-    await handleApiResponse<void>(response, router); // void 타입으로 지정하여 본문 파싱 안 함
+    await handleApiResponse<void>(response, router);
     return true;
   } catch (error) {
     console.error(`환자 ID ${patientId} 삭제 실패:`, error);
-    throw error; // 에러를 다시 던져서 호출하는 쪽에서 처리하도록 함
+    throw error;
   }
 }
 
-// 환자 업데이트를 위한 데이터 타입 정의 (부분 업데이트이므로 Partial 사용)
 export type PatientUpdateData = Partial<Omit<Patient, 'patient_id' | 'organization_id' | 'created_at' | 'updated_at'>>;
 
 export async function updatePatient(patientId: number, data: PatientUpdateData, token: string, router?: CustomRouterForApi): Promise<Patient> {
@@ -244,7 +228,6 @@ export async function updatePatient(patientId: number, data: PatientUpdateData, 
     body: JSON.stringify(data),
   });
   const updatedData = await handleApiResponse<any>(response, router);
-  // 업데이트된 환자 정보도 Patient 타입에 맞게 매핑하여 반환
   return {
     patient_id: updatedData.patient_id,
     organization_id: updatedData.organization_id,
@@ -303,7 +286,6 @@ export async function addPatient(data: Omit<Patient, 'patient_id' | 'created_at'
         body: JSON.stringify(data),
     });
     const createdPatient = await handleApiResponse<any>(response, router);
-    // 생성된 환자 정보도 Patient 타입에 맞게 매핑하여 반환
     return {
         patient_id: createdPatient.patient_id,
         organization_id: createdPatient.organization_id,
@@ -346,4 +328,47 @@ export async function addPatient(data: Omit<Patient, 'patient_id' | 'created_at'
         movementPattern: createdPatient.movementPattern || "N/A",
         gps: createdPatient.gps || { lat: "N/A", long: "N/A", address: "N/A", timestamp: "N/A" },
     };
+}
+
+// 최신 센서 데이터 가져오기 (Mobius용)
+interface LatestSensorDataResponse {
+  patient_id: number;
+  current_heart_rate?: number | null;
+  current_temperature?: number | null;
+  current_fall_status?: 'normal' | 'alert' | string | null;
+  current_gps_latitude?: number | null;
+  current_gps_longitude?: number | null;
+  current_step_count?: number | null;
+  current_acceleration_x?: number | null;
+  current_acceleration_y?: number | null;
+  current_acceleration_z?: number | null;
+  current_gyro_x?: number | null;
+  current_gyro_y?: number | null;
+  current_gyro_z?: number | null;
+  current_battery_level?: number | null;
+  // 백엔드에서 시계열 히스토리도 함께 내려준다면 여기에 추가
+  heart_rate_history?: number[];
+  temperature_history?: number[];
+  acceleration_history?: { x: number; y: number; z: number; timestamp: string }[];
+  gyro_history?: { x: number; y: number; z: number; timestamp: string }[];
+  gps_history?: { lat: number; long: number; address?: string; timestamp: string }[];
+  lastUpdated?: string; // 마지막 업데이트 시간
+}
+
+export async function fetchLatestSensorData(
+  patientId: number,
+  token: string,
+  router?: CustomRouterForApi
+): Promise<LatestSensorDataResponse | null> {
+  const response = await fetch(`${BASE_API_URL}/api/v1/patients/${patientId}/latest_sensor_data`, { // ✨ 새로운 API 엔드포인트!
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (response.status === 404) {
+    console.warn(`Patient ID ${patientId}에 대한 최신 센서 데이터가 없습니다.`);
+    return null; // 데이터가 없을 경우 null 반환
+  }
+
+  return handleApiResponse<LatestSensorDataResponse>(response, router);
 }

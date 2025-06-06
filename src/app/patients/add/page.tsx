@@ -7,11 +7,9 @@ import Link from 'next/link';
 import MyCustomLayout from '@/components/Layout';
 import type { CurrentUser, UserProfile } from '@/types';
 import { Gender, PatientStatus, UserType } from '@/types/enums';
-
-// 새로 만든 api.ts 파일에서 addPatient 함수를 import
 import { addPatient } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth'; // useAuth 훅 import
 
-// PatientCreate Pydantic 스키마와 유사하게 입력 데이터 타입을 정의
 interface PatientFormData {
   patient_code: string;
   full_name: string;
@@ -29,14 +27,12 @@ interface PatientFormData {
 
 export default function AddPatientPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
+  const { currentUser, isLoadingAuth, authToken } = useAuth(); // useAuth 훅 사용!
 
   const [formData, setFormData] = useState<PatientFormData>({
     patient_code: '',
     full_name: '',
-    organization_id: 0,
+    organization_id: 0, // 초기값 0, useEffect에서 currentUser.organization.id로 설정
     date_of_birth: null,
     gender: null,
     address: null,
@@ -51,55 +47,23 @@ export default function AddPatientPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem('authToken');
-      const userJson = localStorage.getItem('currentUser');
-      if (token && userJson) {
-        try {
-          const parsedUser = JSON.parse(userJson) as UserProfile;
-          setAuthToken(token);
-          const appUser: CurrentUser = {
-            id: parsedUser.id,
-            username: parsedUser.username,
-            full_name: parsedUser.full_name,
-            email: parsedUser.email,
-            phone_number: parsedUser.phone_number,
-            user_type: parsedUser.user_type,
-            organization_id: parsedUser.organization_id,
-            organization: parsedUser.organization,
-            created_at: parsedUser.created_at,
-            updated_at: parsedUser.updated_at,
-            is_superuser: parsedUser.is_superuser,
-          };
-          setCurrentUser(appUser);
-          if (appUser.organization?.id) {
-            setFormData(prev => ({ ...prev, organization_id: appUser.organization!.id }));
-          } else {
-            setError("사용자의 소속 기관 정보를 찾을 수 없습니다. 로그인을 다시 시도해주세요.");
-          }
-        } catch (e) {
-          console.error("사용자 정보 파싱 오류:", e);
-          localStorage.clear();
-          router.replace('/login');
-        }
+    if (!isLoadingAuth && currentUser) {
+      if (currentUser.organization?.id) {
+        setFormData(prev => ({ ...prev, organization_id: currentUser.organization!.id }));
       } else {
-        localStorage.clear();
-        router.replace('/login');
+        setError("사용자의 소속 기관 정보를 찾을 수 없습니다. 로그인을 다시 시도해주세요.");
       }
-      setIsLoadingAuth(false);
+    } else if (!isLoadingAuth && !currentUser) {
+      // 인증되지 않은 상태면 로그인 페이지로 리다이렉트
+      router.replace('/login');
     }
-  }, [router]);
+  }, [isLoadingAuth, currentUser, router]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    // 계산된 속성 이름 오류 해결: `[name]: value === '' ? null : value` 이 구문은 문제 없음
-    // 다른 에러 메시지 (ChangeEventHandler) 해결: HTMLTextAreaElement에는 HTMLInputElement에 있는 일부 속성이 없어 발생하는 문제
-    // 이를 해결하기 위해 e.target을 각 타입으로 좁혀서 처리하거나, HTMLInputElement를 사용하지 않는 필드에서만 TextareaHTMLAttributes를 사용하도록 조정해야 해.
-    // 여기서는 가장 간단한 해결책으로, HTMLTextAreaElement만 허용하는 onChange에 맞게 타입을 명시적으로 재정의해볼게.
-    // 또는 React.ChangeEvent<HTMLInputElement | HTMLSelectElement> 와 React.ChangeEvent<HTMLTextAreaElement>를 분리해서 처리해야 해.
     setFormData(prev => ({ ...prev, [name]: value === '' ? null : value }));
   };
-
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -131,11 +95,7 @@ export default function AddPatientPage() {
     };
 
     try {
-      // api.ts의 addPatient 함수 사용
-      // addPatient 함수는 'Patient' 타입에서 Omit된 필드들을 요구하므로,
-      // formData에서 해당 필드들을 제외하고 전달 (즉, PatientCreate 스키마에 맞는 데이터만 전달)
-      // 타입 캐스팅 'as any'는 임시 방편이므로, 더 정교한 타입 정의가 필요하다면 이 부분을 개선해야 해.
-      await addPatient(patientDataToSubmit as any, authToken, router);
+      await addPatient(patientDataToSubmit as any, authToken, router); // 'as any'는 타입 불일치 해결을 위한 임시 방편
 
       alert('새로운 환자가 성공적으로 등록되었습니다!');
       router.push('/patients');
@@ -219,13 +179,12 @@ export default function AddPatientPage() {
 
           <div>
             <label htmlFor="medical_notes" className="block text-sm font-medium text-gray-700">의료 특이사항</label>
-            {/* onChange 핸들러 타입 수정 */}
             <textarea
               name="medical_notes"
               id="medical_notes"
               rows={3}
               value={formData.medical_notes || ''}
-              onChange={handleChange as React.ChangeEventHandler<HTMLTextAreaElement>} // ✨ 이 부분을 수정할 거야!
+              onChange={handleChange as React.ChangeEventHandler<HTMLTextAreaElement>}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               placeholder="환자의 주요 질환, 알레르기, 복용 중인 약물 등 특이사항을 기록해주세요."
             />

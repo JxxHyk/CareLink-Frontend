@@ -2,19 +2,11 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// import Image from 'next/image'; // 로고 이미지를 사용한다면
-
-// 필요한 타입들을 src/types/index.ts 와 src/types/enums.ts 에서 import
-// import { UserProfile, IdNamePair, ApiErrorResponse } from '@/types';
-// import { UserType, UserStatus } from '@/types/enums';
-
-// ✨ 새로 만든 api.ts 파일에서 인증 관련 함수들을 import
-import { loginUser, fetchCurrentUser } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth'; // useAuth 훅 import!
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { login } = useAuth(); // useAuth 훅에서 login 함수만 가져오기
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,34 +18,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // 1. 로그인 요청 -> 토큰 받기 (api.ts의 loginUser 사용)
-      const loginData = await loginUser(username, password); // ✨ 변경된 부분!
-
-      const accessToken = loginData.access_token;
-      if (!accessToken) {
-        setError('로그인 토큰을 받지 못했습니다. 서버 응답을 확인해주세요.');
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. 토큰을 사용해서 /me 엔드포인트에서 사용자 상세 정보 가져오기 (api.ts의 fetchCurrentUser 사용)
-      // fetchCurrentUser 함수에 router를 넘겨서 401 에러 시 리다이렉트 처리 위임
-      const userProfileForStorage = await fetchCurrentUser(accessToken, router); // ✨ 변경된 부분!
-
-      // 로그인 성공: localStorage에 정보 저장하고 메인 페이지로 이동
-      if (typeof window !== "undefined") {
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('authToken', accessToken);
-        // UserProfile 타입으로 완전히 매핑된 객체를 localStorage에 저장
-        localStorage.setItem('currentUser', JSON.stringify(userProfileForStorage));
-      }
-      
-      console.log("LoginPage - Login Success! Navigating to dashboard.");
-      router.push('/');
-
-    } catch (err: any) { // err 타입을 any로 명시 (에러 객체는 다양한 형태일 수 있으므로)
-      console.error('로그인 과정 중 네트워크 또는 기타 오류 발생:', err);
-      // api.ts에서 던진 에러 메시지를 그대로 표시
+      await login(username, password); // useAuth 훅의 login 함수 호출
+      // 로그인 성공 시 useAuth 훅 내부에서 리다이렉트 처리되므로 여기서는 추가 작업 불필요
+    } catch (err: any) {
+      console.error('로그인 과정 중 오류 발생:', err);
       setError(err.message || '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
