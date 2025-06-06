@@ -4,22 +4,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { CurrentUser, IdNamePair } from '@/types';
+import { UserRole } from '@/types/enums'; // ✨ UserRole Enum import!
 
 interface NavbarProps {
   currentUser: CurrentUser | null;
 }
 
 const Navbar = ({ currentUser }: NavbarProps) => {
-  const pathname = usePathname(); // 현재 경로를 가져옴
-
+  const pathname = usePathname();
   const organizationName = currentUser?.organization?.name || "기관 정보 없음";
 
-  // ✨ 현재 경로에 따라 링크의 클래스 이름을 결정하는 헬퍼 함수
-  const getLinkClassName = (href: string) => {
-    // pathname이 null일 경우를 대비하여 빈 문자열로 처리하거나 적절히 대체
-    // 여기서는 pathname이 null이면 어떤 링크도 활성으로 간주하지 않음
-    const currentPath = pathname || ''; // null일 경우 빈 문자열로 처리
+  // ✨ 현재 로그인한 사용자의 역할 확인 (없으면 기본값 설정)
+  const userRole = currentUser?.user_type;
 
+  const getLinkClassName = (href: string) => {
+    const currentPath = pathname || '';
     const isActive = currentPath === href || (href !== '/' && currentPath.startsWith(href));
     
     return `text-base font-medium transition-colors duration-200 ${
@@ -38,9 +37,15 @@ const Navbar = ({ currentUser }: NavbarProps) => {
             <Link href="/" className={getLinkClassName('/')}>
               대시보드
             </Link>
-            <Link href="/patients" className={getLinkClassName('/patients')}>
-              환자 관리
-            </Link>
+
+            {/* ✨ userRole이 UserRole.STAFF가 아닐 때만 '환자 관리' 링크 렌더링 */}
+            {userRole !== UserRole.STAFF && (
+              <Link href="/patients" className={getLinkClassName('/patients')}>
+                환자 관리
+              </Link>
+            )}
+
+            {/* 설정 탭은 일단 나중에 구현해도 되니 여기 그대로 두자 */}
             <Link href="/settings" className={getLinkClassName('/settings')}>
               설정
             </Link>

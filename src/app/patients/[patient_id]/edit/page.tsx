@@ -251,7 +251,7 @@ export default function EditPatientPage() {
                             <select name="status" id="status" value={patientData.status || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
                                 <option value={PatientStatus.ACTIVE}>Active</option>
                                 <option value={PatientStatus.INACTIVE}>Inactive</option>
-                                <option value={PatientStatus.DISCHARGED}>Discharged</option>
+                                <option value={PatientStatus.ARCHIVED}>Archived</option>
                             </select>
                         </div>
                         <div>

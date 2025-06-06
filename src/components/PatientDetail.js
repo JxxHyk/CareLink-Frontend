@@ -1,16 +1,15 @@
 // src/components/PatientDetail.js
-import React, { useState } from 'react'; // ✨ useState import
+import React, { useState } from 'react';
 import HeartRateCard from './HeartRateCard';
 import TemperatureCard from './TemperatureCard';
 import FallDetectionCard from './FallDetectionCard';
 import GPSCard from './GPSCard';
 import AlertHistory from './AlertHistory';
-import MedicalNotesModal from './MedicalNotesModal'; // ✨ 새로 만들 모달 컴포넌트 import
-import EmergencyManualModal from './EmergencyManualModal'; // ✨ 새로 만들 모달 컴포넌트 import
+import MedicalNotesModal from './MedicalNotesModal';
+import EmergencyManualModal from './EmergencyManualModal';
 
 
 const PatientDetail = ({ patient }) => {
-  // ✨ 팝업 모달의 열림/닫힘 상태 관리
   const [isMedicalNotesModalOpen, setIsMedicalNotesModalOpen] = useState(false);
   const [isEmergencyManualModalOpen, setIsEmergencyManualModalOpen] = useState(false);
 
@@ -32,10 +31,10 @@ const PatientDetail = ({ patient }) => {
     current_fall_status,
     gps,
     lastUpdated,
-    medical_notes, // ✨ patient prop에서 medical_notes 추출
-    contact_number, // ✨ patient prop에서 contact_number 추출
-    emergency_contact, // ✨ patient prop에서 emergency_contact 추출
-    emergency_number, // ✨ patient prop에서 emergency_number 추출
+    medical_notes,
+    contact_number,
+    emergency_contact,
+    emergency_number,
   } = patient;
 
   return (
@@ -49,16 +48,19 @@ const PatientDetail = ({ patient }) => {
           </div>
         </div>
         <div className="flex space-x-2">
+          {/* ✨ 이력 버튼 주석 처리 (또는 삭제) */}
+          {/*
           <button className="px-3 py-2 bg-white border border-gray-300 rounded-button text-gray-700 hover:bg-gray-50 whitespace-nowrap">
             <i className="ri-history-line mr-1"></i>이력
           </button>
+          */}
           <button
-            onClick={() => setIsMedicalNotesModalOpen(true)} // ✨ 클릭 시 모달 열기
+            onClick={() => setIsMedicalNotesModalOpen(true)}
             className="px-3 py-2 bg-white border border-gray-300 rounded-button text-gray-700 hover:bg-gray-50 whitespace-nowrap">
             <i className="ri-file-list-3-line mr-1"></i>의료 특이사항
           </button>
           <button
-            onClick={() => setIsEmergencyManualModalOpen(true)} // ✨ 클릭 시 모달 열기
+            onClick={() => setIsEmergencyManualModalOpen(true)}
             className="px-3 py-2 bg-red-100 border border-red-200 rounded-button text-red-600 hover:bg-red-200 whitespace-nowrap">
             <i className="ri-alarm-warning-line mr-1"></i>응급상황
           </button>
@@ -89,23 +91,21 @@ const PatientDetail = ({ patient }) => {
 
       <AlertHistory />
 
-      {/* ✨ 의료 특이사항 모달 */}
       <MedicalNotesModal
         isOpen={isMedicalNotesModalOpen}
         onClose={() => setIsMedicalNotesModalOpen(false)}
-        notes={medical_notes || '작성된 의료 특이사항이 없습니다.'} // notes prop 전달
+        notes={medical_notes || '작성된 의료 특이사항이 없습니다.'}
       />
 
-      {/* ✨ 응급상황 매뉴얼 모달 */}
       <EmergencyManualModal
         isOpen={isEmergencyManualModalOpen}
         onClose={() => setIsEmergencyManualModalOpen(false)}
         patientName={full_name}
-        gpsLocation={gps?.address || '확인 불가'} // GPS 주소 또는 기본값
+        gpsLocation={gps?.address || '확인 불가'}
         contactNumber={contact_number || '정보 없음'}
         emergencyContact={emergency_contact || '정보 없음'}
         emergencyNumber={emergency_number || '정보 없음'}
-        medicalNotes={medical_notes || '특이사항 없음'} // 의료 특이사항 내용
+        medicalNotes={medical_notes || '특이사항 없음'}
       />
     </div>
   );

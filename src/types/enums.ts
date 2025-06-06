@@ -35,7 +35,7 @@ export enum Gender {
 export enum PatientStatus {
   ACTIVE = "active",
   INACTIVE = "inactive",
-  DISCHARGED = "discharged",
+  ARCHIVED = "archived",
 }
 
 // 기기 상태 타입 (백엔드: DeviceStatus)

@@ -28,7 +28,7 @@ const SubHeader = ({ currentUser }: SubHeaderProps) => {
     <header className="bg-white border-b border-gray-200 py-3 px-6 flex justify-between items-center">
       <div className="flex items-center">
         <h1 className="text-xl font-semibold text-gray-800">
-          모니터링 대시보드
+          모니터링 시스템
         </h1>
       </div>
       <div className="flex items-center space-x-6">
