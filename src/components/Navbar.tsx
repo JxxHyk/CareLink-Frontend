@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { CurrentUser, IdNamePair } from '@/types';
-import { UserRole } from '@/types/enums'; // ✨ UserRole Enum import!
+import { UserType } from '@/types/enums'; // ✨ UserType Enum import!
 
 interface NavbarProps {
   currentUser: CurrentUser | null;
@@ -38,8 +38,8 @@ const Navbar = ({ currentUser }: NavbarProps) => {
               대시보드
             </Link>
 
-            {/* ✨ userRole이 UserRole.STAFF가 아닐 때만 '환자 관리' 링크 렌더링 */}
-            {userRole !== UserRole.STAFF && (
+            {/* ✨ userRole이 UserType.STAFF가 아닐 때만 '환자 관리' 링크 렌더링 */}
+            {userRole !== UserType.STAFF && (
               <Link href="/patients" className={getLinkClassName('/patients')}>
                 환자 관리
               </Link>

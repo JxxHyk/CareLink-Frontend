@@ -1,14 +1,14 @@
 // src/components/SubHeader.tsx
 import React from 'react';
 import { CurrentUser } from '@/types'; // 인터페이스는 index.ts에서 가져옴
-import { UserRole } from '@/types/enums'; // ✨ UserRole은 enums.ts에서 가져옴
+import { UserType } from '@/types/enums'; // ✨ UserRole은 enums.ts에서 가져옴
 
 // 역할 코드에 따른 한국어 이름 매핑 객체
-// ✨ UserRole Enum을 키 타입으로 사용
-const roleDisplayNames: { [key in UserRole]?: string } = {
-  [UserRole.SUPER_ADMIN]: "시스템 관리자",
-  [UserRole.ADMIN]: "관리자",
-  [UserRole.STAFF]: "보호자",
+// ✨ UserType Enum을 키 타입으로 사용
+const roleDisplayNames: { [key in UserType]?: string } = {
+  [UserType.SUPER_ADMIN]: "시스템 관리자",
+  [UserType.ADMIN]: "관리자",
+  [UserType.STAFF]: "보호자",
 };
 
 interface SubHeaderProps {
