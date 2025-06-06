@@ -8,61 +8,8 @@ import MyCustomLayout from '@/components/Layout';
 import type { Patient, UserProfile, Organization } from '@/types';
 import { Gender, PatientStatus } from '@/types/enums';
 
-async function fetchPatientByIdAPI(patientId: string | number, token: string | null, router: any): Promise<Patient | null> { // router 인자 추가
-    if (!token) return null;
-    const API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`;
-    try {
-        const response = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${token}` } });
-        
-        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
-            console.error("fetchPatientByIdAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
-            if (typeof window !== "undefined") {
-                localStorage.clear();
-                router.replace('/login');
-            }
-            return null;
-        }
-
-        if (!response.ok) { console.error("환자 상세 정보 API 실패:", response.status); return null; }
-        const data = await response.json();
-        return { ...data, patient_id: data.id || data.patient_id, full_name: data.full_name || data.name } as Patient;
-    } catch (error) { console.error("환자 상세 정보 API 오류:", error); return null; }
-}
-
-async function updatePatientAPI(
-    patientId: string | number,
-    updateData: Partial<Patient>,
-    token: string | null,
-    router: any // router 인자 추가
-): Promise<Patient | null> {
-    if (!token) return null;
-    const API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`;
-    try {
-        const response = await fetch(API_URL, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(updateData),
-        });
-
-        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
-            console.error("updatePatientAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
-            if (typeof window !== "undefined") {
-                localStorage.clear();
-                router.replace('/login');
-            }
-            return null;
-        }
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error("환자 정보 수정 API 실패:", response.status, errorData);
-            alert(`수정 실패: ${errorData.detail || response.statusText}`);
-            return null;
-        }
-        return await response.json() as Patient;
-    } catch (error) { console.error("환자 정보 수정 API 오류:", error); alert('수정 중 오류 발생'); return null; }
-}
-
+// ✨ 새로 만든 api.ts 파일에서 환자 관련 API 함수들을 import
+import { fetchPatientById, updatePatient, PatientUpdateData } from '@/lib/api';
 
 export default function EditPatientPage() {
     const router = useRouter();
@@ -107,35 +54,39 @@ export default function EditPatientPage() {
     const loadPatientDetail = useCallback(async () => {
         if (authToken && patientId) {
             setIsLoadingPatient(true);
-            // router 인자를 fetchPatientByIdAPI에 전달
-            const fetchedPatient = await fetchPatientByIdAPI(patientId, authToken, router);
-            if (fetchedPatient) {
-                setPatientData({
-                    patient_code: fetchedPatient.patient_code,
-                    full_name: fetchedPatient.full_name,
-                    date_of_birth: fetchedPatient.date_of_birth ? fetchedPatient.date_of_birth.split('T')[0] : '',
-                    gender: fetchedPatient.gender as Gender | '' || '',
-                    address: fetchedPatient.address || '',
-                    contact_number: fetchedPatient.contact_number || '',
-                    emergency_contact: fetchedPatient.emergency_contact || '',
-                    emergency_number: fetchedPatient.emergency_number || '',
-                    medical_notes: fetchedPatient.medical_notes || '',
-                    status: fetchedPatient.status as PatientStatus || PatientStatus.ACTIVE,
-                    registration_date: fetchedPatient.registration_date ? fetchedPatient.registration_date.split('T')[0] : '',
-                });
-            } else {
-                setError("환자 정보를 불러오지 못했습니다.");
+            try {
+                // api.ts의 fetchPatientById 사용
+                const fetchedPatient = await fetchPatientById(parseInt(patientId, 10), authToken, router); // ✨ 변경된 부분!
+                if (fetchedPatient) {
+                    setPatientData({
+                        patient_code: fetchedPatient.patient_code,
+                        full_name: fetchedPatient.full_name,
+                        date_of_birth: fetchedPatient.date_of_birth ? fetchedPatient.date_of_birth.split('T')[0] : '',
+                        gender: fetchedPatient.gender as Gender | '' || '',
+                        address: fetchedPatient.address || '',
+                        contact_number: fetchedPatient.contact_number || '',
+                        emergency_contact: fetchedPatient.emergency_contact || '',
+                        emergency_number: fetchedPatient.emergency_number || '',
+                        medical_notes: fetchedPatient.medical_notes || '',
+                        status: fetchedPatient.status as PatientStatus || PatientStatus.ACTIVE,
+                        registration_date: fetchedPatient.registration_date ? fetchedPatient.registration_date.split('T')[0] : '',
+                    });
+                } else {
+                    setError("환자 정보를 불러오지 못했습니다.");
+                }
+            } catch (err: any) {
+                setError(err.message || "환자 정보를 불러오지 못했습니다.");
+            } finally {
+                setIsLoadingPatient(false);
             }
-            setIsLoadingPatient(false);
         }
-    }, [authToken, patientId, router]); // router를 의존성 배열에 추가
+    }, [authToken, patientId, router]);
 
     useEffect(() => {
         if (!isLoadingAuth && authToken) {
             loadPatientDetail();
         }
     }, [isLoadingAuth, authToken, loadPatientDetail]);
-
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -149,21 +100,31 @@ export default function EditPatientPage() {
         setIsSubmitting(true);
         setError(null);
 
-        const dataToUpdate: Partial<Patient> = { ...patientData };
+        const dataToUpdate: PatientUpdateData = { ...patientData }; // api.ts에서 정의된 PatientUpdateData 타입 사용
+        // 백엔드 스키마에 맞춰 빈 문자열을 null로 변환
         if (dataToUpdate.date_of_birth === '') dataToUpdate.date_of_birth = null;
         if (dataToUpdate.registration_date === '') dataToUpdate.registration_date = null;
         if (dataToUpdate.gender === '') dataToUpdate.gender = null;
+        if (dataToUpdate.address === '') dataToUpdate.address = null;
+        if (dataToUpdate.contact_number === '') dataToUpdate.contact_number = null;
+        if (dataToUpdate.emergency_contact === '') dataToUpdate.emergency_contact = null;
+        if (dataToUpdate.emergency_number === '') dataToUpdate.emergency_number = null;
+        if (dataToUpdate.medical_notes === '') dataToUpdate.medical_notes = null;
 
-        // router 인자를 updatePatientAPI에 전달
-        const updatedPatient = await updatePatientAPI(patientId, dataToUpdate, authToken, router);
 
-        if (updatedPatient) {
-            alert('환자 정보가 성공적으로 수정되었습니다!');
-            router.push('/patients');
-        } else {
-            // updatePatientAPI 내부에서 alert를 띄웠을 수 있음
+        try {
+            // api.ts의 updatePatient 사용
+            const updatedPatient = await updatePatient(parseInt(patientId, 10), dataToUpdate, authToken, router); // ✨ 변경된 부분!
+
+            if (updatedPatient) {
+                alert('환자 정보가 성공적으로 수정되었습니다!');
+                router.push('/patients');
+            }
+        } catch (err: any) {
+            setError(err.message || '정보 수정 중 오류 발생');
+        } finally {
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
     };
 
     if (isLoadingAuth || !currentUser) {

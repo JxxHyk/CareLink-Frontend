@@ -5,6 +5,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+// import type { CurrentUser, UserProfile } from '@/types';
+import { UserType } from '@/types/enums'; // UserType import
+
+// ✨ 새로 만든 api.ts 파일에서 인증 관련 함수들을 import
+import { registerUser } from '@/lib/api';
+
 export default function RegisterPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -12,9 +18,9 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState(''); // 👈 핸드폰 번호 상태 추가!
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [organizationId, setOrganizationId] = useState('');
-  const [userType, setUserType] = useState('staff');
+  const [userType, setUserType] = useState('staff'); // UserType Enum 값 사용
 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -32,46 +38,36 @@ export default function RegisterPage() {
       return;
     }
 
-    const REGISTER_API_URL = 'http://127.0.0.1:8000/api/v1/auth/register'; // 실제 URL 확인!
-
     const registrationData = {
       username,
-      email,
-      password,
-      full_name: fullName || undefined,
-      phone_number: phoneNumber || undefined, // 👈 핸드폰 번호 추가! 비어있으면 undefined로
+      email: email === '' ? null : email,
+      password, // Password는 실제 프로덕션에서는 해싱해서 보내야 하지만, 일단 스키마에 맞춰
+      full_name: fullName === '' ? null : fullName,
+      phone_number: phoneNumber === '' ? null : phoneNumber,
       organization_id: parseInt(organizationId, 10),
-      user_type: userType,
+      user_type: userType as UserType, // UserType Enum으로 캐스팅
     };
 
     try {
-      const response = await fetch(REGISTER_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registrationData),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setSuccessMessage('회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
-        // 필드 초기화
-        setUsername('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setFullName('');
-        setPhoneNumber(''); // 👈 핸드폰 번호 필드도 초기화
-        setOrganizationId('');
-        setUserType('staff');
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else {
-        setError(data.detail || '회원가입에 실패했습니다.');
-      }
-    } catch (err) {
-      setError('회원가입 중 오류 발생');
+      // api.ts의 registerUser 함수 사용
+      await registerUser(registrationData); // ✨ 변경된 부분!
+
+      setSuccessMessage('회원가입에 성공했습니다! 로그인 페이지로 이동합니다.');
+      // 필드 초기화
+      setUsername('');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      setFullName('');
+      setPhoneNumber('');
+      setOrganizationId('');
+      setUserType('staff');
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+    } catch (err: any) {
+      console.error('회원가입 중 오류 발생:', err);
+      setError(err.message || '회원가입에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +88,6 @@ export default function RegisterPage() {
           새로운 기관 관리자 계정을 생성합니다.
         </p>
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* 아이디, 이메일, 비밀번호, 비밀번호 확인, 이름 필드는 이전과 동일 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">아이디 (Username)</label>
             <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50" disabled={isLoading}/>
@@ -114,13 +109,12 @@ export default function RegisterPage() {
             <input type="text" id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50" disabled={isLoading}/>
           </div>
 
-          {/* 👇 핸드폰 번호 입력 필드 추가! */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="phoneNumber">
               핸드폰 번호 (선택 사항)
             </label>
             <input
-              type="tel" // type을 "tel"로 하면 모바일에서 숫자 키패드가 뜨는 등 이점이 있음
+              type="tel"
               id="phoneNumber"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
@@ -129,9 +123,7 @@ export default function RegisterPage() {
               disabled={isLoading}
             />
           </div>
-          {/* 👆 핸드폰 번호 입력 필드 추가 끝 */}
 
-          {/* 소속 기관 ID, 사용자 유형 필드는 이전과 동일 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="organizationId">소속 기관 ID</label>
             <input type="number" id="organizationId" value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} required className="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50" placeholder="숫자로 입력" disabled={isLoading}/>

@@ -33,9 +33,4 @@ export const timeSeriesData = {
     heartRate: generateSeries(78, 100, 6, 50, 120), // 100개의 심박수 데이터
     temperature: generateSeries(36.8, 100, 0.4, 35.0, 38.5, 1), // 100개의 체온 데이터
   },
-  // 다른 환자 ID에 대한 모의 데이터 예시 (필요시 추가)
-  // 1: {
-  //   heartRate: generateSeries(70, 50, 5, 60, 110),
-  //   temperature: generateSeries(36.5, 50, 0.3, 35.5, 38.0, 1),
-  // },
 };

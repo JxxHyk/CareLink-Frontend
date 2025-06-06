@@ -5,28 +5,31 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MyCustomLayout from '@/components/Layout';
-import type { CurrentUser, UserProfile } from '@/types'; // User -> UserProfile, CurrentUser
-import { Gender, PatientStatus } from '@/types/enums';
+import type { CurrentUser, UserProfile } from '@/types';
+import { Gender, PatientStatus, UserType } from '@/types/enums';
+
+// 새로 만든 api.ts 파일에서 addPatient 함수를 import
+import { addPatient } from '@/lib/api';
 
 // PatientCreate Pydantic 스키마와 유사하게 입력 데이터 타입을 정의
 interface PatientFormData {
   patient_code: string;
   full_name: string;
   organization_id: number;
-  date_of_birth?: string;
-  gender?: Gender | '';
-  address?: string;
-  contact_number?: string;
-  emergency_contact?: string;
-  emergency_number?: string;
-  medical_notes?: string;
-  status?: PatientStatus;
-  registration_date?: string;
+  date_of_birth: string | null;
+  gender: Gender | '' | null;
+  address: string | null;
+  contact_number: string | null;
+  emergency_contact: string | null;
+  emergency_number: string | null;
+  medical_notes: string | null;
+  status: PatientStatus | null;
+  registration_date: string | null;
 }
 
 export default function AddPatientPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null); // User -> CurrentUser
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
 
@@ -34,29 +37,27 @@ export default function AddPatientPage() {
     patient_code: '',
     full_name: '',
     organization_id: 0,
-    date_of_birth: '',
-    gender: '',
-    address: '',
-    contact_number: '',
-    emergency_contact: '',
-    emergency_number: '',
-    medical_notes: '',
+    date_of_birth: null,
+    gender: null,
+    address: null,
+    contact_number: null,
+    emergency_contact: null,
+    emergency_number: null,
+    medical_notes: null,
     status: PatientStatus.ACTIVE,
     registration_date: new Date().toISOString().split('T')[0],
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 인증 정보 로드 및 organization_id 설정 (MainPageController와 중복되지만, 페이지 직접 접근 시를 대비)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem('authToken');
       const userJson = localStorage.getItem('currentUser');
       if (token && userJson) {
         try {
-          const parsedUser = JSON.parse(userJson) as UserProfile; // UserProfile로 파싱
+          const parsedUser = JSON.parse(userJson) as UserProfile;
           setAuthToken(token);
-          // CurrentUser 타입으로 변환하여 저장
           const appUser: CurrentUser = {
             id: parsedUser.id,
             username: parsedUser.username,
@@ -78,11 +79,11 @@ export default function AddPatientPage() {
           }
         } catch (e) {
           console.error("사용자 정보 파싱 오류:", e);
-          localStorage.clear(); // 오류 발생 시 로컬 스토리지 정리
+          localStorage.clear();
           router.replace('/login');
         }
       } else {
-        localStorage.clear(); // 토큰이나 유저 정보가 없으면 정리
+        localStorage.clear();
         router.replace('/login');
       }
       setIsLoadingAuth(false);
@@ -91,8 +92,14 @@ export default function AddPatientPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // 계산된 속성 이름 오류 해결: `[name]: value === '' ? null : value` 이 구문은 문제 없음
+    // 다른 에러 메시지 (ChangeEventHandler) 해결: HTMLTextAreaElement에는 HTMLInputElement에 있는 일부 속성이 없어 발생하는 문제
+    // 이를 해결하기 위해 e.target을 각 타입으로 좁혀서 처리하거나, HTMLInputElement를 사용하지 않는 필드에서만 TextareaHTMLAttributes를 사용하도록 조정해야 해.
+    // 여기서는 가장 간단한 해결책으로, HTMLTextAreaElement만 허용하는 onChange에 맞게 타입을 명시적으로 재정의해볼게.
+    // 또는 React.ChangeEvent<HTMLInputElement | HTMLSelectElement> 와 React.ChangeEvent<HTMLTextAreaElement>를 분리해서 처리해야 해.
+    setFormData(prev => ({ ...prev, [name]: value === '' ? null : value }));
   };
+
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -108,44 +115,33 @@ export default function AddPatientPage() {
     setIsSubmitting(true);
     setError(null);
 
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const ADD_PATIENT_API_URL = `${BASE_API_URL}/api/v1/patients/`;
-
     const patientDataToSubmit = {
         patient_code: formData.patient_code,
         full_name: formData.full_name,
         organization_id: formData.organization_id,
-        date_of_birth: formData.date_of_birth || null,
-        gender: formData.gender || null,
-        address: formData.address || null,
-        contact_number: formData.contact_number || null,
-        emergency_contact: formData.emergency_contact || null,
-        emergency_number: formData.emergency_number || null,
-        medical_notes: formData.medical_notes || null,
-        status: formData.status || PatientStatus.ACTIVE,
+        date_of_birth: formData.date_of_birth,
+        gender: formData.gender,
+        address: formData.address,
+        contact_number: formData.contact_number,
+        emergency_contact: formData.emergency_contact,
+        emergency_number: formData.emergency_number,
+        medical_notes: formData.medical_notes,
+        status: formData.status,
         registration_date: formData.registration_date ? new Date(formData.registration_date).toISOString() : null,
     };
 
     try {
-      const response = await fetch(ADD_PATIENT_API_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(patientDataToSubmit),
-      });
+      // api.ts의 addPatient 함수 사용
+      // addPatient 함수는 'Patient' 타입에서 Omit된 필드들을 요구하므로,
+      // formData에서 해당 필드들을 제외하고 전달 (즉, PatientCreate 스키마에 맞는 데이터만 전달)
+      // 타입 캐스팅 'as any'는 임시 방편이므로, 더 정교한 타입 정의가 필요하다면 이 부분을 개선해야 해.
+      await addPatient(patientDataToSubmit as any, authToken, router);
 
-      if (response.status === 201) {
-        alert('새로운 환자가 성공적으로 등록되었습니다!');
-        router.push('/patients');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || `환자 등록에 실패했습니다. (상태 코드: ${response.status})`);
-      }
-    } catch (err) {
+      alert('새로운 환자가 성공적으로 등록되었습니다!');
+      router.push('/patients');
+    } catch (err: any) {
       console.error("환자 등록 API 호출 중 오류:", err);
-      setError('환자 등록 중 오류가 발생했습니다. 네트워크를 확인해주세요.');
+      setError(err.message || '환자 등록 중 오류가 발생했습니다. 네트워크를 확인해주세요.');
     } finally {
       setIsSubmitting(false);
     }
@@ -170,26 +166,25 @@ export default function AddPatientPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md space-y-6">
-          {/* ... (폼 필드는 그대로 유지) ... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="patient_code" className="block text-sm font-medium text-gray-700">환자 코드 <span className="text-red-500">*</span></label>
-              <input type="text" name="patient_code" id="patient_code" value={formData.patient_code} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
+              <input type="text" name="patient_code" id="patient_code" value={formData.patient_code || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
             </div>
             <div>
               <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">이름 <span className="text-red-500">*</span></label>
-              <input type="text" name="full_name" id="full_name" value={formData.full_name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
+              <input type="text" name="full_name" id="full_name" value={formData.full_name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">생년월일</label>
-              <input type="date" name="date_of_birth" id="date_of_birth" value={formData.date_of_birth} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
+              <input type="date" name="date_of_birth" id="date_of_birth" value={formData.date_of_birth || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
             </div>
             <div>
               <label htmlFor="gender" className="block text-sm font-medium text-gray-700">성별</label>
-              <select name="gender" id="gender" value={formData.gender} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
+              <select name="gender" id="gender" value={formData.gender || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
                 <option value="">선택하세요</option>
                 <option value={Gender.MALE}>남성</option>
                 <option value={Gender.FEMALE}>여성</option>
@@ -200,13 +195,13 @@ export default function AddPatientPage() {
 
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700">주소</label>
-            <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
+            <input type="text" name="address" id="address" value={formData.address || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="contact_number" className="block text-sm font-medium text-gray-700">연락처</label>
-              <input type="tel" name="contact_number" id="contact_number" value={formData.contact_number} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" placeholder="010-1234-5678"/>
+              <input type="tel" name="contact_number" id="contact_number" value={formData.contact_number || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" placeholder="010-1234-5678"/>
             </div>
             <div>
             </div>
@@ -214,22 +209,23 @@ export default function AddPatientPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="emergency_contact" className="block text-sm font-medium text-gray-700">비상 연락처(이름)</label>
-              <input type="text" name="emergency_contact" id="emergency_contact" value={formData.emergency_contact} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
+              <input type="text" name="emergency_contact" id="emergency_contact" value={formData.emergency_contact || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
             </div>
             <div>
               <label htmlFor="emergency_number" className="block text-sm font-medium text-gray-700">비상 연락처(번호)</label>
-              <input type="tel" name="emergency_number" id="emergency_number" value={formData.emergency_number} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" placeholder="010-xxxx-xxxx"/>
+              <input type="tel" name="emergency_number" id="emergency_number" value={formData.emergency_number || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" placeholder="010-xxxx-xxxx"/>
             </div>
           </div>
 
           <div>
             <label htmlFor="medical_notes" className="block text-sm font-medium text-gray-700">의료 특이사항</label>
+            {/* onChange 핸들러 타입 수정 */}
             <textarea
               name="medical_notes"
               id="medical_notes"
               rows={3}
-              value={formData.medical_notes}
-              onChange={handleChange}
+              value={formData.medical_notes || ''}
+              onChange={handleChange as React.ChangeEventHandler<HTMLTextAreaElement>} // ✨ 이 부분을 수정할 거야!
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               placeholder="환자의 주요 질환, 알레르기, 복용 중인 약물 등 특이사항을 기록해주세요."
             />
@@ -238,7 +234,7 @@ export default function AddPatientPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700">환자 상태</label>
-              <select name="status" id="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
+              <select name="status" id="status" value={formData.status || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
                 <option value={PatientStatus.ACTIVE}>Active (활성)</option>
                 <option value={PatientStatus.INACTIVE}>Inactive (비활성)</option>
                 <option value={PatientStatus.ARCHIVED}>Archived (논리적 삭제)</option>
@@ -246,10 +242,9 @@ export default function AddPatientPage() {
             </div>
             <div>
               <label htmlFor="registration_date" className="block text-sm font-medium text-gray-700">등록일</label>
-              <input type="date" name="registration_date" id="registration_date" value={formData.registration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
+              <input type="date" name="registration_date" id="registration_date" value={formData.registration_date || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/>
             </div>
           </div>
-
 
           {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
 
