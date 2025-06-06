@@ -2,23 +2,77 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation'; // useParams 추가!
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import MyCustomLayout from '@/components/Layout';
-import type { Patient, User, OrganizationInfo } from '@/types';
-import { Gender, PatientStatus } from '@/types/enums'; // Enum 경로 확인
+import type { Patient, UserProfile, CurrentUser } from '@/types'; // User -> UserProfile, CurrentUser
+import { Gender, PatientStatus } from '@/types/enums';
 
-// --- 데이터를 FastAPI 백엔드에서 가져오는 함수들 ---
+// ... (fetchPatientByIdAPI, updatePatientAPI 함수는 그대로 유지) ...
+// fetchPatientByIdAPI와 updatePatientAPI는 Patient 타입을 사용하고 있으므로, User 타입을 CurrentUser로 변경할 필요 없음.
+// 하지만 fetchPatientByIdAPI의 리턴 타입과 내부 매핑은 Patient 인터페이스와 정확히 일치하는지 다시 한번 확인하는 게 좋아.
+
 // 특정 환자 정보 가져오기 (상세 페이지용 또는 수정 폼 초기값용)
 async function fetchPatientByIdAPI(patientId: string | number, token: string | null): Promise<Patient | null> {
-    if (!token) return null;
-    const API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`; // 실제 URL로!
+    if (!token) {
+      console.warn("fetchPatientByIdAPI: Auth token not found.");
+      return null;
+    }
+    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
+    const API_URL = `${BASE_API_URL}/api/v1/patients/${patientId}`; // 실제 URL로!
     try {
         const response = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!response.ok) { console.error("환자 상세 정보 API 실패:", response.status); return null; }
+        if (!response.ok) {
+            console.error("환자 상세 정보 API 실패:", response.status, await response.text());
+            return null;
+        }
         const data = await response.json();
         // API 응답과 Patient 타입 매핑 (page.tsx의 fetchAllPatientsFromAPI 함수 참고)
-        return { /* ... API data를 Patient 타입으로 매핑 ... */ ...data, patient_id: data.id || data.patient_id, full_name: data.full_name || data.name } as Patient; // 간단 예시
+        // 여기에 API 응답 필드와 Patient 타입 필드 매핑 로직을 추가해야 함.
+        // 예를 들어, 백엔드에서 patient_id가 'id'로 오면 patient_id: data.id 처럼.
+        return {
+            patient_id: data.patient_id || data.id, // API마다 필드명이 다를 수 있으니 확인
+            organization_id: data.organization_id,
+            patient_code: data.patient_code,
+            full_name: data.full_name,
+            date_of_birth: data.date_of_birth,
+            gender: data.gender,
+            address: data.address,
+            contact_number: data.contact_number,
+            emergency_contact: data.emergency_contact,
+            emergency_number: data.emergency_number,
+            medical_notes: data.medical_notes,
+            status: data.status,
+            registration_date: data.registration_date,
+            created_at: data.created_at,
+            updated_at: data.updated_at,
+            // 나머지 필드도 API 응답에 맞춰 매핑
+            current_heart_rate: data.current_heart_rate ?? null,
+            current_temperature: data.current_temperature ?? null,
+            current_fall_status: data.current_fall_status ?? null,
+            current_gps_latitude: data.current_gps_latitude ?? null,
+            current_gps_longitude: data.current_gps_longitude ?? null,
+            current_step_count: data.current_step_count ?? null,
+            current_acceleration_x: data.current_acceleration_x ?? null,
+            current_acceleration_y: data.current_acceleration_y ?? null,
+            current_acceleration_z: data.current_acceleration_z ?? null,
+            current_gyro_x: data.current_gyro_x ?? null,
+            current_gyro_y: data.current_gyro_y ?? null,
+            current_gyro_z: data.current_gyro_z ?? null,
+            current_battery_level: data.current_battery_level ?? null,
+            heart_rate_history: Array.isArray(data.heart_rate_history) ? data.heart_rate_history : [],
+            temperature_history: Array.isArray(data.temperature_history) ? data.temperature_history : [],
+            acceleration_history: Array.isArray(data.acceleration_history) ? data.acceleration_history : [],
+            gyro_history: Array.isArray(data.gyro_history) ? data.gyro_history : [],
+            gps_history: Array.isArray(data.gps_history) ? data.gps_history : [],
+            age: data.age ?? null,
+            risk: data.risk ?? 'low',
+            lastUpdated: data.lastUpdated || data.updated_at,
+            gyro: data.gyro || { x:0, y:0, z:0 },
+            lastMovement: data.lastMovement || "N/A",
+            movementPattern: data.movementPattern || "N/A",
+            gps: data.gps || { lat: "N/A", long: "N/A", address: "N/A", timestamp: "N/A" },
+        } as Patient;
     } catch (error) { console.error("환자 상세 정보 API 오류:", error); return null; }
 }
 
@@ -29,7 +83,8 @@ async function updatePatientAPI(
     token: string | null
 ): Promise<Patient | null> {
     if (!token) return null;
-    const API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`; // 실제 URL로! (PUT 또는 PATCH)
+    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
+    const API_URL = `${BASE_API_URL}/api/v1/patients/${patientId}`; // 실제 URL로! (PUT 또는 PATCH)
     try {
         const response = await fetch(API_URL, {
             method: 'PUT', // 또는 'PATCH' (백엔드 API 설계에 따라)
@@ -49,33 +104,29 @@ async function updatePatientAPI(
 
 export default function EditPatientPage() {
     const router = useRouter();
-    const params = useParams(); // URL 경로에서 patient_id 가져오기
-    const [patientId, setPatientId] = useState<string | null>(null); // params.patient_id는 string 또는 string[] 일 수 있음
+    const params = useParams();
+    const [patientId, setPatientId] = useState<string | null>(null);
 
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null); // User -> CurrentUser
     const [authToken, setAuthToken] = useState<string | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
 
-    const [patientData, setPatientData] = useState<Partial<Patient> | null>(null); // 수정할 환자 데이터
+    const [patientData, setPatientData] = useState<Partial<Patient> | null>(null);
     const [isLoadingPatient, setIsLoadingPatient] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- 👇 useEffect를 사용해서 params가 유효할 때 patientId 상태 설정 ---
     useEffect(() => {
         if (params && params.patient_id) {
-            // params.patient_id가 string[] (문자열 배열)일 수도 있으므로, 첫 번째 요소 사용 또는 단일 문자열로 처리
             const id = Array.isArray(params.patient_id) ? params.patient_id[0] : params.patient_id;
             setPatientId(id);
-        } else if (params) { // params는 있지만 patient_id가 없는 경우 (이론적으로는 잘 없음)
+        } else if (params) {
             console.warn("Patient ID not found in params, but params object exists:", params);
             setError("환자 ID를 찾을 수 없습니다.");
         }
-        // params가 null이면 아무것도 안 함 (patientId는 null로 유지)
-    }, [params]); // params 객체가 변경될 때마다 실행
-    // --- 👆 patientId 상태 설정 useEffect 끝 ---
+    }, [params]);
 
-    // 인증 정보 로드
+    // 인증 정보 로드 (MainPageController와 중복되지만, 페이지 직접 접근 시를 대비)
     useEffect(() => {
         if (typeof window !== "undefined") {
             const token = localStorage.getItem('authToken');
@@ -83,22 +134,26 @@ export default function EditPatientPage() {
             if (token && userJson) {
                 try {
                     setAuthToken(token);
-                    setCurrentUser(JSON.parse(userJson) as User);
-                } catch (e) { router.replace('/login'); }
+                    setCurrentUser(JSON.parse(userJson) as UserProfile); // UserProfile로 파싱
+                } catch (e) {
+                    console.error("사용자 정보 파싱 오류:", e);
+                    localStorage.clear(); // 오류 발생 시 로컬 스토리지 정리
+                    router.replace('/login');
+                }
             } else {
+                localStorage.clear(); // 토큰이나 유저 정보가 없으면 정리
                 router.replace('/login');
             }
             setIsLoadingAuth(false);
         }
     }, [router]);
 
-    // 수정할 환자 데이터 불러오기
     const loadPatientDetail = useCallback(async () => {
         if (authToken && patientId) {
             setIsLoadingPatient(true);
             const fetchedPatient = await fetchPatientByIdAPI(patientId, authToken);
             if (fetchedPatient) {
-                setPatientData({ // 폼에 바인딩할 형태로 변환 (날짜 형식 등 주의)
+                setPatientData({
                     patient_code: fetchedPatient.patient_code,
                     full_name: fetchedPatient.full_name,
                     date_of_birth: fetchedPatient.date_of_birth ? fetchedPatient.date_of_birth.split('T')[0] : '',
@@ -110,7 +165,6 @@ export default function EditPatientPage() {
                     medical_notes: fetchedPatient.medical_notes || '',
                     status: fetchedPatient.status as PatientStatus || PatientStatus.ACTIVE,
                     registration_date: fetchedPatient.registration_date ? fetchedPatient.registration_date.split('T')[0] : '',
-                    // organization_id는 보통 수정하지 않음
                 });
             } else {
                 setError("환자 정보를 불러오지 못했습니다.");
@@ -120,11 +174,10 @@ export default function EditPatientPage() {
     }, [authToken, patientId]);
 
     useEffect(() => {
-        if (!isLoadingAuth && authToken) { // 인증 정보 로드 완료 후 실행
+        if (!isLoadingAuth && authToken && patientId) { // authToken과 patientId가 모두 있을 때 로드
             loadPatientDetail();
         }
-    }, [isLoadingAuth, authToken, loadPatientDetail]);
-
+    }, [isLoadingAuth, authToken, patientId, loadPatientDetail]); // 의존성 배열에 patientId 추가
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -138,12 +191,7 @@ export default function EditPatientPage() {
         setIsSubmitting(true);
         setError(null);
 
-        // PatientUpdate 스키마에 맞게 전송할 데이터 준비 (patientData에서 필요한 것만)
         const dataToUpdate: Partial<Patient> = { ...patientData };
-        // 예를 들어 organization_id는 보내지 않음 (수정 불가 항목)
-        // delete dataToUpdate.organization_id; // PatientUpdate 스키마에 없다면 괜찮음
-
-        // 날짜 필드가 빈 문자열이면 null로 변환 (API가 null을 기대한다면)
         if (dataToUpdate.date_of_birth === '') dataToUpdate.date_of_birth = null;
         if (dataToUpdate.registration_date === '') dataToUpdate.registration_date = null;
         if (dataToUpdate.gender === '') dataToUpdate.gender = null;
@@ -153,10 +201,7 @@ export default function EditPatientPage() {
 
         if (updatedPatient) {
             alert('환자 정보가 성공적으로 수정되었습니다!');
-            router.push('/patients'); // 환자 관리 목록으로 돌아가기
-        } else {
-            // updatePatientAPI 내부에서 alert를 띄웠을 수 있음
-            // setError('환자 정보 수정에 실패했습니다.'); // 중복 알림 가능성
+            router.push('/patients');
         }
         setIsSubmitting(false);
     };
@@ -185,19 +230,17 @@ export default function EditPatientPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md space-y-6">
-                    {/* --- 환자 코드 (보통 수정 불가, 읽기 전용) --- */}
+                    {/* ... (폼 필드는 그대로 유지) ... */}
                     <div>
                         <label htmlFor="patient_code" className="block text-sm font-medium text-gray-700">환자 코드</label>
                         <input type="text" name="patient_code" id="patient_code" value={patientData.patient_code || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" readOnly />
                     </div>
 
-                    {/* --- 이름 --- */}
                     <div>
                         <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">이름 <span className="text-red-500">*</span></label>
                         <input type="text" name="full_name" id="full_name" value={patientData.full_name || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
                     </div>
 
-                    {/* --- 생년월일, 성별 (AddPatientPage와 동일한 폼 구조 사용) --- */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">생년월일</label>
@@ -214,20 +257,17 @@ export default function EditPatientPage() {
                         </div>
                     </div>
 
-                    {/* --- 주소 --- */}
                     <div>
                         <label htmlFor="address" className="block text-sm font-medium text-gray-700">주소</label>
                         <input type="text" name="address" id="address" value={patientData.address || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
                     </div>
 
-                    {/* --- 연락처, 비상 연락처 --- */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="contact_number" className="block text-sm font-medium text-gray-700">연락처</label>
                             <input type="tel" name="contact_number" id="contact_number" value={patientData.contact_number || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
                         </div>
                         <div>
-                            {/* 연락처2 같은 추가 필드 자리 */}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -241,13 +281,11 @@ export default function EditPatientPage() {
                         </div>
                     </div>
 
-                    {/* --- 의료 특이사항 --- */}
                     <div>
                         <label htmlFor="medical_notes" className="block text-sm font-medium text-gray-700">의료 특이사항</label>
                         <textarea name="medical_notes" id="medical_notes" rows={3} value={patientData.medical_notes || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
                     </div>
 
-                    {/* --- 환자 상태, 등록일 --- */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="status" className="block text-sm font-medium text-gray-700">환자 상태</label>
