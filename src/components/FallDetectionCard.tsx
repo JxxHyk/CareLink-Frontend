@@ -9,13 +9,14 @@ interface GyroData {
   z: number;
 }
 
-type FallStatusType = 'normal' | 'alert' | null; // Patient 타입의 fallStatus와 일치
+// ✨ 이 부분을 수정할 거야! Patient 인터페이스의 current_fall_status 타입과 일치시키자.
+type FallStatusType = 'normal' | 'alert' | string | null; // Patient 타입에 맞게 string 포함!
 
 interface FallDetectionCardProps {
   gyro: GyroData; // 자이로 데이터는 객체 형태로 가정
   lastMovement: string | null;
   movementPattern: string | null;
-  fallStatus: FallStatusType;
+  fallStatus: FallStatusType; // 수정된 FallStatusType 사용
 }
 
 const FallDetectionCard = ({
@@ -39,8 +40,8 @@ const FallDetectionCard = ({
     fallStatusClass = 'px-2 py-1 bg-green-100 text-green-600 rounded-full text-xs font-medium';
     fallIndicatorDotColor = 'bg-green-500';
     fallIndicatorText = '안정적';
-  } else { // fallStatus가 null이거나 다른 값일 경우
-    fallStatusText = '데이터 없음';
+  } else { // fallStatus가 null이거나 다른 string 값일 경우
+    fallStatusText = '데이터 없음'; // 또는 '알 수 없음'으로 표시할 수 있음
     fallStatusClass = 'px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium';
     fallIndicatorDotColor = 'bg-gray-400';
     fallIndicatorText = 'N/A';
@@ -53,7 +54,7 @@ const FallDetectionCard = ({
   const gyroZ = gyro?.z ?? '--';
 
   return (
-    <div className="sensor-card bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-[280px]"> {/* 고정 높이 유지 */}
+    <div className="sensor-card bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-[280px]">
       <div className="p-4 border-b border-gray-100">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
@@ -68,10 +69,10 @@ const FallDetectionCard = ({
         </div>
       </div>
       <div className="p-4">
-        <div className="grid grid-cols-3 gap-x-2 text-center mb-10"> {/* grid와 gap-x-2로 간격 조절 */}
+        <div className="grid grid-cols-3 gap-x-2 text-center mb-10">
           <div className="flex flex-col items-center">
-            <span className="text-xs text-gray-500 mb-0.5">X-axis</span> {/* mb 줄임 */}
-            <span className="text-base font-medium text-gray-800">{gyroX}</span> {/* 크기 약간 조절 */}
+            <span className="text-xs text-gray-500 mb-0.5">X-axis</span>
+            <span className="text-base font-medium text-gray-800">{gyroX}</span>
           </div>
           <div className="flex flex-col items-center">
             <span className="text-xs text-gray-500 mb-0.5">Y-axis</span>
@@ -82,18 +83,18 @@ const FallDetectionCard = ({
             <span className="text-base font-medium text-gray-800">{gyroZ}</span>
           </div>
         </div>
-        <div className="bg-gray-50 p-3 rounded-lg mb-8"> {/* mb 추가 */}
+        <div className="bg-gray-50 p-3 rounded-lg mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-6 h-6 flex items-center justify-center rounded-full bg-green-100 text-green-500 mr-2">
                 <i className="ri-timer-line"></i>
               </div>
-              <span className="text-sm text-gray-700">마지막 움직임:</span> {/* 텍스트 약간 수정 */}
+              <span className="text-sm text-gray-700">마지막 움직임:</span>
             </div>
-            <span className="text-sm font-medium text-gray-800">{lastMovement || '--'}</span> {/* null이면 "--" */}
+            <span className="text-sm font-medium text-gray-800">{lastMovement || '--'}</span>
           </div>
         </div>
-         <div className="mt-4"> {/* 이 div는 flex-grow 바깥에 있어서 하단에 위치하게 됨 */}
+         <div className="mt-4">
           <div className="flex justify-between items-center text-xs text-gray-500">
             <div>
               움직임 패턴: <span className="font-medium text-gray-700">{movementPattern || '--'}</span>

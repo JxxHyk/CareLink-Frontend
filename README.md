@@ -4,42 +4,58 @@
 CareLink-Frontend/
 ├── eslint.config.mjs
 ├── next-env.d.ts
-├── next.config.ts
+├── next.config.mjs
 ├── package-lock.json
 ├── package.json
 ├── postcss.config.js
 ├── postcss.config.mjs
-├── public/
+├── public
 │   ├── file.svg
 │   ├── globe.svg
 │   ├── next.svg
 │   ├── vercel.svg
 │   └── window.svg
 ├── README.md
-├── src/
-│   ├── app/
+├── src
+│   ├── app
 │   │   ├── favicon.ico
 │   │   ├── globals.css
 │   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
+│   │   ├── login
+│   │   │   └── page.tsx
+│   │   ├── page.tsx
+│   │   ├── patients
+│   │   │   ├── [patient_id]
+│   │   │   │   └── edit
+│   │   │   │       └── page.tsx
+│   │   │   ├── add
+│   │   │   │   └── page.tsx
+│   │   │   └── page.tsx
+│   │   ├── register
+│   │   │   └── page.tsx
+│   │   └── settings
+│   ├── components
 │   │   ├── AlertHistory.js
-│   │   ├── FallDetectionCard.js
-│   │   ├── GPSCard.js
-│   │   ├── HeartRateCard.js
-│   │   ├── Layout.js
-│   │   ├── Navbar.js
+│   │   ├── EmergencyManualModal.tsx
+│   │   ├── FallDetectionCard.tsx
+│   │   ├── GPSCard.tsx
+│   │   ├── HeartRateCard.tsx
+│   │   ├── Layout.tsx
+│   │   ├── LoginPage.tsx
+│   │   ├── MedicalNotesModal.tsx
+│   │   ├── Navbar.tsx
 │   │   ├── PatientDetail.js
-│   │   ├── PatientList.js
+│   │   ├── PatientList.tsx
 │   │   ├── PatientListItem.js
-│   │   ├── SubHeader.js
-│   │   └── TemperatureCard.js
-│   ├── lib/
-│   │   └── mockData.js
-│   └── pages/
-│       ├── _app.js
-│       ├── _documents.js
-│       └── index_backup.js
+│   │   ├── StatusUpdateModal.tsx
+│   │   ├── SubHeader.tsx
+│   │   └── TemperatureCard.tsx
+│   ├── lib
+│   │   └── timeSeriesMockData.js
+│   └── types
+│       ├── echarts.ts
+│       ├── enums.ts
+│       └── index.ts
 ├── tailwind.config.js
 └── tsconfig.json
 ```
