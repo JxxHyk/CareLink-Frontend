@@ -3,7 +3,7 @@
 // 백엔드 app/models/enums.py와 일치하도록 정의합니다.
 
 // 사용자 역할 타입 (백엔드: UserType)
-export enum UserRole {
+export enum UserType {
   ADMIN = "admin",
   STAFF = "staff",
   SUPER_ADMIN = "super_admin",
