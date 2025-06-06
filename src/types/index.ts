@@ -19,7 +19,7 @@ export interface ApiErrorResponse {
 
 // ✨ 2. Enum 타입은 src/types/enums.ts에서 import하여 사용합니다.
 import {
-  UserRole,
+  UserType,
   UserStatus,
   OrganizationStatus,
   Gender,
@@ -57,7 +57,7 @@ export interface UserProfile extends TimestampFields {
   email: string | null;
   full_name: string | null;
   phone_number: string | null;
-  user_type: UserRole.STAFF; // ✨ UserRole Enum 사용
+  user_type: UserType; // ✨ UserType Enum 사용
   status: UserStatus; // ✨ UserStatus Enum 사용
   
   organization_id: number;

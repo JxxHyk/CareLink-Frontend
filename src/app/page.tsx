@@ -11,7 +11,7 @@ import {
   IdNamePair,
 } from '@/types';
 import {
-  UserRole,
+  UserType,
   UserStatus,
   AlertType,
   AlertSeverity,

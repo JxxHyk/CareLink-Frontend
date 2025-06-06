@@ -14,7 +14,7 @@ import {
 } from '@/types'; // 인터페이스들은 계속 index.ts에서 가져옴
 
 import { // ✨ enums.ts에서 필요한 Enum들을 가져옴
-  UserRole,
+  UserType,
   UserStatus, // ✨ UserStatus도 import
   // AlertType, // 현재 로그인 페이지에서 사용되지 않으므로 제거 가능
   // AlertSeverity, // 현재 로그인 페이지에서 사용되지 않으므로 제거 가능
@@ -105,7 +105,7 @@ export default function LoginPage() {
         id: rawUserDataFromMe.id ?? 0, // 백엔드 UserProfile에 id가 필수로 있음을 가정. 없다면 0으로 할당
         username: rawUserDataFromMe.username ?? rawUserDataFromMe.full_name ?? "UnknownUser",
         full_name: rawUserDataFromMe.full_name ?? rawUserDataFromMe.username ?? "알 수 없는 사용자",
-        user_type: (rawUserDataFromMe.user_type as UserRole) ?? UserRole.STAFF, // user_type 없으면 STAFF
+        user_type: (rawUserDataFromMe.user_type as UserType) ?? UserType.STAFF, // user_type 없으면 STAFF
         organization_id: rawUserDataFromMe.organization?.id ?? 0, // FK는 ERD에서 필수이므로 기본값 설정
         organization: rawUserDataFromMe.organization ?? null,
         email: rawUserDataFromMe.email ?? null,
