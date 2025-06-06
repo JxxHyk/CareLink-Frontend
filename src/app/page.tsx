@@ -1,14 +1,14 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react'; // useCallback 추가
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation'; // useRouter import
+
 import {
   Patient,
   UserProfile,
   CurrentUser,
   IdNamePair,
-  ApiErrorResponse, // ApiErrorResponse 임포트
 } from '@/types';
 import {
   UserRole,
@@ -22,11 +22,12 @@ import MyCustomLayout from '@/components/Layout';
 import PatientList from '@/components/PatientList';
 import PatientDetail from '@/components/PatientDetail';
 import { timeSeriesData } from '@/lib/timeSeriesMockData';
+import HeartRateCard from '@/components/HeartRateCard';
 
 const SIMULATION_INTERVAL = 2000; // 센서 값 업데이트 주기 (ms)
 
 // fetchAllPatientsFromAPI 함수는 이전 단계에서 정의한 것을 그대로 사용한다고 가정
-async function fetchAllPatientsFromAPI(token: string | null, organizationInfo: IdNamePair | undefined | null): Promise<Patient[]> {
+async function fetchAllPatientsFromAPI(token: string | null, organizationInfo: IdNamePair | undefined | null, router: any): Promise<Patient[]> { // router 인자 추가
   if (!token || !organizationInfo?.id) {
     console.warn("fetchAllPatientsFromAPI: Auth token or Organization ID not found.");
     return [];
@@ -36,18 +37,25 @@ async function fetchAllPatientsFromAPI(token: string | null, organizationInfo: I
   const PATIENTS_API_URL = `${BASE_API_URL}/api/v1/patients/?organization_id=${organizationId}`;
 
   try {
-    // console.log(`[API호출] organization ID ${organizationId} 환자 정보 요청: ${PATIENTS_API_URL}`);
     const response = await fetch(PATIENTS_API_URL, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     });
+
+    if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
+      console.error("fetchAllPatientsFromAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
+      if (typeof window !== "undefined") {
+        localStorage.clear(); // 로컬 스토리지 클리어
+        router.replace('/login'); // useRouter를 사용하여 로그인 페이지로 리다이렉트
+      }
+      return []; // 빈 배열 반환하여 더 이상 진행하지 않음
+    }
 
     if (!response.ok) {
       console.error(`fetchAllPatientsFromAPI: API request failed with status ${response.status}`, await response.text());
       return [];
     }
     const rawApiPatients = await response.json();
-    // console.log(`[API응답] organization ID ${organizationId} raw 환자 정보:`, rawApiPatients);
 
     return (rawApiPatients as any[]).map(apiPatient => {
       const patientFromDB: Patient = {
@@ -87,7 +95,7 @@ async function fetchAllPatientsFromAPI(token: string | null, organizationInfo: I
         age: apiPatient.age ?? null,
         risk: apiPatient.risk ?? 'low',
         lastUpdated: apiPatient.updated_at ?? new Date().toISOString(),
-        gyro: apiPatient.gyro || { x:0, y:0, z:0 },
+        gyro: apiPatient.gyro || { x: 0, y: 0, z: 0 },
         lastMovement: apiPatient.lastMovement || "N/A",
         movementPattern: apiPatient.movementPattern || "N/A",
         gps: apiPatient.gps || { lat: "N/A", long: "N/A", address: "N/A", timestamp: "N/A" },
@@ -110,23 +118,17 @@ function DashboardView({ onLogout, currentUser, authToken }: {
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [sortCriteria, setSortCriteria] = useState<string>('risk');
-  
-  // ✨ 모의 데이터 순환을 위한 인덱스 (시간의 흐름을 나타냄)
   const [currentTimeIndex, setCurrentTimeIndex] = useState<number>(0);
+
+  const router = useRouter(); // useRouter 훅 가져오기
 
   // 1. 초기 환자 데이터 로드 및 모의 센서 히스토리 결합 (이전 단계에서 구현)
   useEffect(() => {
     const loadInitialDataAndCombineWithMock = async () => {
       if (currentUser && authToken && currentUser.organization) {
         setIsLoadingPatients(true);
-        // console.log("[DataLoading] 현재 사용자:", currentUser.username, "기관 ID:", currentUser.organization.id);
-        const patientsFromDB = await fetchAllPatientsFromAPI(authToken, currentUser.organization);
-
-        // if (patientsFromDB.length > 0) {
-        //   console.log("[DataLoading] DB환자정보 수신 완료. 환자 수:", patientsFromDB.length);
-        // } else {
-        //   console.warn("[DataLoading] DB환자정보 없음 또는 API 로드 실패");
-        // }
+        // router 인자를 fetchAllPatientsFromAPI에 전달
+        const patientsFromDB = await fetchAllPatientsFromAPI(authToken, currentUser.organization, router);
 
         const patientsCombinedWithMock = patientsFromDB.map(patient => {
           const patientIdKey = patient.patient_id;
@@ -138,21 +140,20 @@ function DashboardView({ onLogout, currentUser, authToken }: {
           let temperatureHistoryForCard = patient.temperature_history || [];
 
           if (mockSensorSeries) {
-            // console.log(`[DataLoading] 환자 ID ${patientIdKey} (${patient.full_name}): 모의 데이터 발견`);
             if (heartRateHistoryForCard.length === 0 && mockSensorSeries.heartRate) {
-              heartRateHistoryForCard = [...mockSensorSeries.heartRate]; // 원본 배열 복사
+              heartRateHistoryForCard = [...mockSensorSeries.heartRate];
             }
             if (temperatureHistoryForCard.length === 0 && mockSensorSeries.temperature) {
-              temperatureHistoryForCard = [...mockSensorSeries.temperature]; // 원본 배열 복사
+              temperatureHistoryForCard = [...mockSensorSeries.temperature];
             }
             if (initialCurrentHeartRate === null && heartRateHistoryForCard.length > 0) {
-              initialCurrentHeartRate = heartRateHistoryForCard[0]; // 최신 데이터 (0번 인덱스)
+              initialCurrentHeartRate = heartRateHistoryForCard[0];
             }
             if (initialCurrentTemperature === null && temperatureHistoryForCard.length > 0) {
-              initialCurrentTemperature = temperatureHistoryForCard[0]; // 최신 데이터 (0번 인덱스)
+              initialCurrentTemperature = temperatureHistoryForCard[0];
             }
           }
-          
+
           return {
             ...patient,
             current_heart_rate: initialCurrentHeartRate,
@@ -162,84 +163,98 @@ function DashboardView({ onLogout, currentUser, authToken }: {
           };
         });
 
-        // console.log("[DataLoading] 최종 결합 데이터:", patientsCombinedWithMock.map(p => ({id: p.patient_id, name: p.full_name, hr: p.current_heart_rate, temp: p.current_temperature, hrHistCount: p.heart_rate_history?.length })));
         setAllPatients(patientsCombinedWithMock);
-        setCurrentTimeIndex(0); // 데이터 로드 시 시뮬레이션 인덱스 초기화
+        setCurrentTimeIndex(0);
         setIsLoadingPatients(false);
-        // console.log("[DataLoading] 데이터로딩 및 결합 완료");
       } else {
         setAllPatients([]);
         setIsLoadingPatients(false);
       }
     };
     loadInitialDataAndCombineWithMock();
-  }, [currentUser, authToken]);
+  }, [currentUser, authToken, router]); // router를 의존성 배열에 추가
 
   // ✨ 2. 실시간 센서 값 업데이트 시뮬레이션 (주기적으로 current 값 변경)
   useEffect(() => {
     if (isLoadingPatients || allPatients.length === 0) {
-      // console.log("[Simulation] 로딩 중이거나 환자 데이터가 없어 시뮬레이션 건너뜀.");
       return;
     }
 
-    // console.log(`[Simulation] ${SIMULATION_INTERVAL}ms 간격으로 시뮬레이션 시작. 현재 시간 인덱스: ${currentTimeIndex}`);
     const intervalId = setInterval(() => {
       setCurrentTimeIndex(prevIndex => prevIndex + 1);
     }, SIMULATION_INTERVAL);
 
     return () => {
-      // console.log("[Simulation] 인터벌 정리");
       clearInterval(intervalId);
     };
-  }, [isLoadingPatients, allPatients]); // allPatients가 변경될 때 (초기 로드 완료 시) 인터벌 시작
+  }, [isLoadingPatients, allPatients]);
 
   // ✨ currentTimeIndex가 변경될 때마다 allPatients의 current 값들을 업데이트
   useEffect(() => {
-    if (isLoadingPatients || allPatients.length === 0 || currentTimeIndex === 0) { // currentTimeIndex가 0이면 초기값이므로 아직 업데이트 안 함
-        // console.log("[SimulationUpdate] 환자 데이터 없거나 초기 인덱스라 current 값 업데이트 건너뜀.");
-        return;
+    if (isLoadingPatients || allPatients.length === 0 || currentTimeIndex === 0) {
+      return;
     }
-    
-    // console.log(`[SimulationUpdate] currentTimeIndex 변경됨: ${currentTimeIndex}. current 센서 값 업데이트 시도.`);
+
     setAllPatients(currentPatientList =>
       currentPatientList.map(patient => {
         const patientIdKey = patient.patient_id;
         const mockSensors = timeSeriesData[patientIdKey as keyof typeof timeSeriesData];
 
         if (!mockSensors || !mockSensors.heartRate || !mockSensors.temperature) {
-          // console.log(`[SimulationUpdate] 환자 ID ${patientIdKey}: 모의 센서 데이터 없음. 기존 값 유지.`);
-          return patient; // 모의 데이터 없으면 변경 없음
+          return patient;
         }
 
-        // 모의 데이터 배열 내에서 순환하도록 인덱스 계산
-        // timeSeriesData는 최신 데이터가 0번 인덱스에 있으므로, currentTimeIndex에 따라 값을 가져옴
         const newHeartRate = mockSensors.heartRate[currentTimeIndex % mockSensors.heartRate.length];
         const newTemperature = mockSensors.temperature[currentTimeIndex % mockSensors.temperature.length];
-        
-        // console.log(`[SimulationUpdate] 환자 ID ${patientIdKey}: HR ${newHeartRate}, Temp ${newTemperature}`);
 
-        // 위험도 업데이트 (예시)
-        let updatedRisk: Patient['risk'] = patient.risk;
-        if ((newHeartRate ?? 0) > 100 || (newTemperature ?? 0) > 38.5) updatedRisk = 'high';
-        else if ((newHeartRate ?? 0) < 55 || (newTemperature ?? 0) <= 35.7) updatedRisk = 'high';
-        else if ((newHeartRate ?? 0) > 85 || (newTemperature ?? 0) > 37.5) updatedRisk = 'medium';
-        else if (((newHeartRate ?? 0) < 60 && (newHeartRate ?? 0) >= 55) || (newTemperature ?? 0) <= 36.0 ) updatedRisk = 'medium';
-        else updatedRisk = 'low';
+        let updatedRisk: Patient['risk'] = 'low'; // 기본값을 'low'로 초기화
+
+        // 🚨 이 부분 수정!
+        // HeartRateCard.tsx의 위험/주의 기준을 기반으로 Risk 판단
+        // TemperatureCard.tsx의 위험/주의 기준을 기반으로 Risk 판단
+
+        // --- High Risk 조건 (심박수 또는 체온이 Critical 범위일 경우) ---
+        // 심박수: 100 초과 또는 55 미만
+        const isHeartRateCriticalHigh = (newHeartRate ?? 0) > 100;
+        const isHeartRateCriticalLow = (newHeartRate ?? 0) < 55;
+
+        // 체온: 38.0 이상 또는 35.7 이하
+        const isTemperatureCriticalHigh = (newTemperature ?? 0) >= 38.0;
+        const isTemperatureCriticalLow = (newTemperature ?? 0) <= 35.7;
+
+        if (isHeartRateCriticalHigh || isHeartRateCriticalLow || isTemperatureCriticalHigh || isTemperatureCriticalLow) {
+          updatedRisk = 'high';
+        }
+        // --- Medium Risk 조건 (심박수 또는 체온이 Warning 범위일 경우, High Risk가 아닐 때) ---
+        else {
+          // 심박수: 85 초과 (High 아님) 또는 55 이상 60 미만 (High 아님)
+          const isHeartRateWarning = ((newHeartRate ?? 0) > 85 && (newHeartRate ?? 0) <= 100) || ((newHeartRate ?? 0) < 60 && (newHeartRate ?? 0) >= 55);
+
+          // 체온: 37.5 이상 38.0 미만 (High 아님) 또는 35.7 초과 36.0 미만 (High 아님)
+          const isTemperatureWarning = ((newTemperature ?? 0) >= 37.5 && (newTemperature ?? 0) < 38.0) || ((newTemperature ?? 0) < 36.0 && (newTemperature ?? 0) > 35.7);
+
+          if (isHeartRateWarning || isTemperatureWarning) {
+            updatedRisk = 'medium';
+          }
+          // --- Low Risk 조건 (위의 모든 조건에 해당하지 않을 경우) ---
+          else {
+            updatedRisk = 'low';
+          }
+        }
+        // 🚨 수정 끝!
 
         return {
           ...patient,
           current_heart_rate: newHeartRate,
           current_temperature: newTemperature,
           risk: updatedRisk,
-          lastUpdated: new Date().toLocaleTimeString(), // 간단히 현재 시간으로
-          // historyData는 변경하지 않고 그대로 유지 (카드가 알아서 슬라이딩)
+          lastUpdated: new Date().toLocaleTimeString(),
         };
       })
     );
-  }, [currentTimeIndex, isLoadingPatients, allPatients]); // 의존성 배열에 allPatients 추가
+  }, [currentTimeIndex]);
 
 
-  // 나머지 UI 및 상태 관리 로직 (검색, 정렬, 선택 등)은 기존 코드 유지
   const displayedPatients: Patient[] = useMemo(() => {
     let filtered: Patient[] = allPatients;
     if (searchTerm) {
@@ -275,7 +290,7 @@ function DashboardView({ onLogout, currentUser, authToken }: {
     if (!isLoadingPatients && displayedPatients.length > 0) {
       const firstPatient = displayedPatients[0];
       if ((selectedPatientId === null || !displayedPatients.find(p => p.patient_id === selectedPatientId)) && firstPatient) {
-          setSelectedPatientId(firstPatient.patient_id);
+        setSelectedPatientId(firstPatient.patient_id);
       }
     } else if (!isLoadingPatients && displayedPatients.length === 0) {
       setSelectedPatientId(null);
@@ -284,28 +299,29 @@ function DashboardView({ onLogout, currentUser, authToken }: {
 
   const handleSelectPatient = (patient: Patient) => setSelectedPatientId(patient.patient_id);
   const handleSort = (criteria: string) => setSortCriteria(criteria);
-  
+
   const handleRefreshPatients = async () => {
-      if (currentUser && authToken && currentUser.organization) {
-        setIsLoadingPatients(true);
-        const patientsFromDB = await fetchAllPatientsFromAPI(authToken, currentUser.organization);
-        const patientsCombinedWithMock = patientsFromDB.map(patient => {
-            const patientIdKey = patient.patient_id;
-            const mockSensorSeries = timeSeriesData[patientIdKey as keyof typeof timeSeriesData];
-            return {
-                ...patient,
-                current_heart_rate: patient.current_heart_rate ?? (mockSensorSeries?.heartRate?.[0] ?? null),
-                current_temperature: patient.current_temperature ?? (mockSensorSeries?.temperature?.[0] ?? null),
-                heart_rate_history: mockSensorSeries?.heartRate || [],
-                temperature_history: mockSensorSeries?.temperature || [],
-            };
-        });
-        setAllPatients(patientsCombinedWithMock);
-        setCurrentTimeIndex(0); // 새로고침 시 시뮬레이션 인덱스 초기화
-        setIsLoadingPatients(false);
-      }
+    if (currentUser && authToken && currentUser.organization) {
+      setIsLoadingPatients(true);
+      // router 인자를 fetchAllPatientsFromAPI에 전달
+      const patientsFromDB = await fetchAllPatientsFromAPI(authToken, currentUser.organization, router);
+      const patientsCombinedWithMock = patientsFromDB.map(patient => {
+        const patientIdKey = patient.patient_id;
+        const mockSensorSeries = timeSeriesData[patientIdKey as keyof typeof timeSeriesData];
+        return {
+          ...patient,
+          current_heart_rate: patient.current_heart_rate ?? (mockSensorSeries?.heartRate?.[0] ?? null),
+          current_temperature: patient.current_temperature ?? (mockSensorSeries?.temperature?.[0] ?? null),
+          heart_rate_history: mockSensorSeries?.heartRate || [],
+          temperature_history: mockSensorSeries?.temperature || [],
+        };
+      });
+      setAllPatients(patientsCombinedWithMock);
+      setCurrentTimeIndex(0);
+      setIsLoadingPatients(false);
+    }
   };
-  
+
   if (isLoadingPatients && currentUser) {
     return (
       <MyCustomLayout currentUser={currentUser}>
@@ -320,9 +336,8 @@ function DashboardView({ onLogout, currentUser, authToken }: {
     <MyCustomLayout currentUser={currentUser}>
       <>
         <div className="w-[320px] border-r border-gray-200 bg-white flex flex-col shrink-0">
-          {/* 로그아웃 버튼 (이전 단계에서 복구) */}
           <div className="p-4 border-b border-gray-200 space-y-2">
-            <button 
+            <button
               onClick={onLogout}
               className="w-full p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
             >
@@ -367,143 +382,60 @@ export default function MainPageController() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // ✨ 토큰 유효성 검증 함수 (새로 추가)
-  const validateToken = useCallback(async (token: string): Promise<boolean> => {
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const ME_API_URL = `${BASE_API_URL}/api/v1/auth/me`;
-
-    try {
-      const response = await fetch(ME_API_URL, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        // 토큰이 유효하고 사용자 정보도 잘 받아왔으면, currentUser 업데이트
-        const parsedUser: UserProfile = userData; // FastAPI /me 응답이 UserProfile과 일치한다고 가정
-        const appUser: CurrentUser = {
-          id: parsedUser.id,
-          username: parsedUser.username,
-          full_name: parsedUser.full_name,
-          email: parsedUser.email,
-          phone_number: parsedUser.phone_number,
-          user_type: parsedUser.user_type,
-          organization_id: parsedUser.organization_id,
-          organization: parsedUser.organization,
-          created_at: parsedUser.created_at,
-          updated_at: parsedToDateString(parsedUser.updated_at), // Date 객체를 문자열로 변환
-          is_superuser: parsedUser.is_superuser,
-        };
-        setCurrentUser(appUser);
-        localStorage.setItem('currentUser', JSON.stringify(parsedUser)); // 로컬 스토리지 업데이트
-        return true;
-      } else if (response.status === 401) {
-        // 토큰 만료 또는 유효하지 않음
-        const errorResult = await response.json() as ApiErrorResponse;
-        console.error("Token validation failed: 401 Unauthorized", errorResult.detail);
-        return false;
-      } else {
-        // 기타 API 에러
-        console.error("Token validation failed with status:", response.status, await response.text());
-        return false;
-      }
-    } catch (error) {
-      console.error("Error during token validation network request:", error);
-      return false;
-    }
-  }, []);
-
-  // ✨ 날짜 문자열 변환 도우미 함수 추가
-  const parsedToDateString = (dateString: string | null | undefined): string => {
-    if (!dateString) return new Date().toISOString(); // 기본값으로 현재 시간
-    try {
-        const date = new Date(dateString);
-        // Date 객체가 유효한지 확인
-        if (isNaN(date.getTime())) {
-            console.warn("Invalid date string provided, returning current ISO string:", dateString);
-            return new Date().toISOString();
-        }
-        return date.toISOString();
-    } catch (e) {
-        console.warn("Error parsing date string, returning current ISO string:", dateString, e);
-        return new Date().toISOString();
-    }
-  };
-
-
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      if (typeof window === "undefined") return;
-
+    if (typeof window !== "undefined") {
       const storedToken = localStorage.getItem('authToken');
       const storedUserJson = localStorage.getItem('currentUser');
 
-      if (storedToken) {
-        const isValid = await validateToken(storedToken); // 백엔드에 토큰 유효성 검증
-        if (isValid) {
-          setIsAuthenticated(true);
-          // validateToken 함수 내에서 currentUser를 업데이트하므로, 여기서는 추가 파싱 불필요
+      if (storedToken && storedUserJson) {
+        try {
+          const parsedUser: UserProfile = JSON.parse(storedUserJson);
+          const appUser: CurrentUser = {
+            id: parsedUser.id,
+            username: parsedUser.username,
+            full_name: parsedUser.full_name,
+            email: parsedUser.email,
+            phone_number: parsedUser.phone_number,
+            user_type: parsedUser.user_type,
+            organization_id: parsedUser.organization_id,
+            organization: parsedUser.organization,
+            created_at: parsedUser.created_at,
+            updated_at: parsedUser.updated_at,
+            is_superuser: parsedUser.is_superuser,
+          };
+          setCurrentUser(appUser);
           setAuthToken(storedToken);
-          console.log("MainPageController - Token is valid. User authenticated.");
-        } else {
-          console.log("MainPageController - Token invalid or expired. Clearing storage and redirecting to login.");
+          setIsAuthenticated(true);
+        } catch (e) {
+          console.error("MainPageController - 사용자 정보 파싱 오류:", e); // 에러 로그 추가
           localStorage.clear();
           setIsAuthenticated(false);
-          setCurrentUser(null);
-          setAuthToken(null);
           router.replace('/login');
         }
       } else {
-        console.log("MainPageController - No auth token found. Redirecting to login.");
-        localStorage.clear(); // 혹시라도 이상한 데이터가 남아있을까봐
-        setIsAuthenticated(false);
-        setCurrentUser(null);
-        setAuthToken(null);
-        router.replace('/login');
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') { // /register 페이지도 로그인 필요 없으므로 추가
+          router.replace('/login');
+        }
       }
       setIsLoadingAuth(false);
-    };
-
-    checkAuthStatus();
-  }, [router, validateToken]); // validateToken을 의존성 배열에 추가
+    }
+  }, [router]);
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.clear();
-    }
+    if (typeof window !== "undefined") localStorage.clear();
     setIsAuthenticated(false);
     setCurrentUser(null);
     setAuthToken(null);
-    console.log("Logout successful. Redirecting to login.");
     router.replace('/login');
   };
 
-  if (isLoadingAuth) {
-    return (
-      <div className="flex items-center justify-center min-h-screen text-xl bg-gradient-to-br from-primary/70 via-primary to-secondary/80 text-white">
-        인증 상태 확인 중...
-      </div>
-    );
+  if (isLoadingAuth) return <div className="flex items-center justify-center min-h-screen text-xl">인증 상태 확인 중...</div>;
+  if (!isAuthenticated && typeof window !== "undefined" && window.location.pathname !== '/login' && window.location.pathname !== '/register') { // /register 페이지도 로그인 필요 없으므로 추가
+    return <div className="flex items-center justify-center min-h-screen text-xl">로그인 페이지로 이동 중...</div>;
+  }
+  if (!isAuthenticated && window.location.pathname !== '/login' && window.location.pathname !== '/register') { // 로그인 및 회원가입 페이지가 아니면 null 반환하지 않음
+    return null; // 이미 리다이렉션 중일 수 있으므로
   }
 
-  // 인증되지 않았고, 현재 경로가 로그인 페이지가 아니라면 로그인 페이지로 리디렉션
-  if (!isAuthenticated && typeof window !== "undefined" && window.location.pathname !== '/login') {
-    // 이 부분은 이미 useEffect에서 처리되므로, 거의 도달하지 않거나 매우 짧게 깜빡일 수 있음
-    return (
-      <div className="flex items-center justify-center min-h-screen text-xl bg-gradient-to-br from-primary/70 via-primary to-secondary/80 text-white">
-        로그인 페이지로 이동 중...
-      </div>
-    );
-  }
-
-  // 인증되었으면 DashboardView 렌더링
-  if (isAuthenticated && currentUser && authToken) {
-    return <DashboardView onLogout={handleLogout} currentUser={currentUser} authToken={authToken} />;
-  }
-
-  // 그 외의 경우 (예: 인증되지 않았고 이미 /login 페이지인 경우)
-  return null;
+  return <DashboardView onLogout={handleLogout} currentUser={currentUser} authToken={authToken} />;
 }

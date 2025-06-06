@@ -5,92 +5,54 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import MyCustomLayout from '@/components/Layout';
-import type { Patient, UserProfile, CurrentUser } from '@/types'; // User -> UserProfile, CurrentUser
+import type { Patient, UserProfile, Organization } from '@/types';
 import { Gender, PatientStatus } from '@/types/enums';
 
-// ... (fetchPatientByIdAPI, updatePatientAPI 함수는 그대로 유지) ...
-// fetchPatientByIdAPI와 updatePatientAPI는 Patient 타입을 사용하고 있으므로, User 타입을 CurrentUser로 변경할 필요 없음.
-// 하지만 fetchPatientByIdAPI의 리턴 타입과 내부 매핑은 Patient 인터페이스와 정확히 일치하는지 다시 한번 확인하는 게 좋아.
-
-// 특정 환자 정보 가져오기 (상세 페이지용 또는 수정 폼 초기값용)
-async function fetchPatientByIdAPI(patientId: string | number, token: string | null): Promise<Patient | null> {
-    if (!token) {
-      console.warn("fetchPatientByIdAPI: Auth token not found.");
-      return null;
-    }
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const API_URL = `${BASE_API_URL}/api/v1/patients/${patientId}`; // 실제 URL로!
+async function fetchPatientByIdAPI(patientId: string | number, token: string | null, router: any): Promise<Patient | null> { // router 인자 추가
+    if (!token) return null;
+    const API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`;
     try {
         const response = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (!response.ok) {
-            console.error("환자 상세 정보 API 실패:", response.status, await response.text());
+        
+        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
+            console.error("fetchPatientByIdAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
+            if (typeof window !== "undefined") {
+                localStorage.clear();
+                router.replace('/login');
+            }
             return null;
         }
+
+        if (!response.ok) { console.error("환자 상세 정보 API 실패:", response.status); return null; }
         const data = await response.json();
-        // API 응답과 Patient 타입 매핑 (page.tsx의 fetchAllPatientsFromAPI 함수 참고)
-        // 여기에 API 응답 필드와 Patient 타입 필드 매핑 로직을 추가해야 함.
-        // 예를 들어, 백엔드에서 patient_id가 'id'로 오면 patient_id: data.id 처럼.
-        return {
-            patient_id: data.patient_id || data.id, // API마다 필드명이 다를 수 있으니 확인
-            organization_id: data.organization_id,
-            patient_code: data.patient_code,
-            full_name: data.full_name,
-            date_of_birth: data.date_of_birth,
-            gender: data.gender,
-            address: data.address,
-            contact_number: data.contact_number,
-            emergency_contact: data.emergency_contact,
-            emergency_number: data.emergency_number,
-            medical_notes: data.medical_notes,
-            status: data.status,
-            registration_date: data.registration_date,
-            created_at: data.created_at,
-            updated_at: data.updated_at,
-            // 나머지 필드도 API 응답에 맞춰 매핑
-            current_heart_rate: data.current_heart_rate ?? null,
-            current_temperature: data.current_temperature ?? null,
-            current_fall_status: data.current_fall_status ?? null,
-            current_gps_latitude: data.current_gps_latitude ?? null,
-            current_gps_longitude: data.current_gps_longitude ?? null,
-            current_step_count: data.current_step_count ?? null,
-            current_acceleration_x: data.current_acceleration_x ?? null,
-            current_acceleration_y: data.current_acceleration_y ?? null,
-            current_acceleration_z: data.current_acceleration_z ?? null,
-            current_gyro_x: data.current_gyro_x ?? null,
-            current_gyro_y: data.current_gyro_y ?? null,
-            current_gyro_z: data.current_gyro_z ?? null,
-            current_battery_level: data.current_battery_level ?? null,
-            heart_rate_history: Array.isArray(data.heart_rate_history) ? data.heart_rate_history : [],
-            temperature_history: Array.isArray(data.temperature_history) ? data.temperature_history : [],
-            acceleration_history: Array.isArray(data.acceleration_history) ? data.acceleration_history : [],
-            gyro_history: Array.isArray(data.gyro_history) ? data.gyro_history : [],
-            gps_history: Array.isArray(data.gps_history) ? data.gps_history : [],
-            age: data.age ?? null,
-            risk: data.risk ?? 'low',
-            lastUpdated: data.lastUpdated || data.updated_at,
-            gyro: data.gyro || { x:0, y:0, z:0 },
-            lastMovement: data.lastMovement || "N/A",
-            movementPattern: data.movementPattern || "N/A",
-            gps: data.gps || { lat: "N/A", long: "N/A", address: "N/A", timestamp: "N/A" },
-        } as Patient;
+        return { ...data, patient_id: data.id || data.patient_id, full_name: data.full_name || data.name } as Patient;
     } catch (error) { console.error("환자 상세 정보 API 오류:", error); return null; }
 }
 
-// 환자 정보 업데이트 API 호출 함수
 async function updatePatientAPI(
     patientId: string | number,
-    updateData: Partial<Patient>, // PatientUpdate 스키마와 유사한 부분 업데이트용 타입
-    token: string | null
+    updateData: Partial<Patient>,
+    token: string | null,
+    router: any // router 인자 추가
 ): Promise<Patient | null> {
     if (!token) return null;
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const API_URL = `${BASE_API_URL}/api/v1/patients/${patientId}`; // 실제 URL로! (PUT 또는 PATCH)
+    const API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`;
     try {
         const response = await fetch(API_URL, {
-            method: 'PUT', // 또는 'PATCH' (백엔드 API 설계에 따라)
+            method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(updateData),
         });
+
+        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
+            console.error("updatePatientAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
+            if (typeof window !== "undefined") {
+                localStorage.clear();
+                router.replace('/login');
+            }
+            return null;
+        }
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.error("환자 정보 수정 API 실패:", response.status, errorData);
@@ -107,7 +69,7 @@ export default function EditPatientPage() {
     const params = useParams();
     const [patientId, setPatientId] = useState<string | null>(null);
 
-    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null); // User -> CurrentUser
+    const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
     const [authToken, setAuthToken] = useState<string | null>(null);
     const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
 
@@ -126,7 +88,6 @@ export default function EditPatientPage() {
         }
     }, [params]);
 
-    // 인증 정보 로드 (MainPageController와 중복되지만, 페이지 직접 접근 시를 대비)
     useEffect(() => {
         if (typeof window !== "undefined") {
             const token = localStorage.getItem('authToken');
@@ -134,14 +95,9 @@ export default function EditPatientPage() {
             if (token && userJson) {
                 try {
                     setAuthToken(token);
-                    setCurrentUser(JSON.parse(userJson) as UserProfile); // UserProfile로 파싱
-                } catch (e) {
-                    console.error("사용자 정보 파싱 오류:", e);
-                    localStorage.clear(); // 오류 발생 시 로컬 스토리지 정리
-                    router.replace('/login');
-                }
+                    setCurrentUser(JSON.parse(userJson) as UserProfile);
+                } catch (e) { router.replace('/login'); }
             } else {
-                localStorage.clear(); // 토큰이나 유저 정보가 없으면 정리
                 router.replace('/login');
             }
             setIsLoadingAuth(false);
@@ -151,7 +107,8 @@ export default function EditPatientPage() {
     const loadPatientDetail = useCallback(async () => {
         if (authToken && patientId) {
             setIsLoadingPatient(true);
-            const fetchedPatient = await fetchPatientByIdAPI(patientId, authToken);
+            // router 인자를 fetchPatientByIdAPI에 전달
+            const fetchedPatient = await fetchPatientByIdAPI(patientId, authToken, router);
             if (fetchedPatient) {
                 setPatientData({
                     patient_code: fetchedPatient.patient_code,
@@ -171,13 +128,14 @@ export default function EditPatientPage() {
             }
             setIsLoadingPatient(false);
         }
-    }, [authToken, patientId]);
+    }, [authToken, patientId, router]); // router를 의존성 배열에 추가
 
     useEffect(() => {
-        if (!isLoadingAuth && authToken && patientId) { // authToken과 patientId가 모두 있을 때 로드
+        if (!isLoadingAuth && authToken) {
             loadPatientDetail();
         }
-    }, [isLoadingAuth, authToken, patientId, loadPatientDetail]); // 의존성 배열에 patientId 추가
+    }, [isLoadingAuth, authToken, loadPatientDetail]);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -196,12 +154,14 @@ export default function EditPatientPage() {
         if (dataToUpdate.registration_date === '') dataToUpdate.registration_date = null;
         if (dataToUpdate.gender === '') dataToUpdate.gender = null;
 
-
-        const updatedPatient = await updatePatientAPI(patientId, dataToUpdate, authToken);
+        // router 인자를 updatePatientAPI에 전달
+        const updatedPatient = await updatePatientAPI(patientId, dataToUpdate, authToken, router);
 
         if (updatedPatient) {
             alert('환자 정보가 성공적으로 수정되었습니다!');
             router.push('/patients');
+        } else {
+            // updatePatientAPI 내부에서 alert를 띄웠을 수 있음
         }
         setIsSubmitting(false);
     };
@@ -230,7 +190,6 @@ export default function EditPatientPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md space-y-6">
-                    {/* ... (폼 필드는 그대로 유지) ... */}
                     <div>
                         <label htmlFor="patient_code" className="block text-sm font-medium text-gray-700">환자 코드</label>
                         <input type="text" name="patient_code" id="patient_code" value={patientData.patient_code || ''} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" readOnly />
