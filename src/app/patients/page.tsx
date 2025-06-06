@@ -2,23 +2,21 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // useRouter import
 import MyCustomLayout from '@/components/Layout';
 import StatusUpdateModal from '@/components/StatusUpdateModal';
 import { PatientStatus } from '@/types/enums';
-import type { Patient, CurrentUser, UserProfile } from '@/types'; // User -> CurrentUser, UserProfile
-// 아이콘 사용을 위해
-import { RiEdit2Line, RiDeleteBinLine, RiToggleLine, RiRefreshLine, RiUserAddLine } from '@remixicon/react';
+import type { Patient, UserProfile } from '@/types';
+import { RiEdit2Line, RiDeleteBinLine, RiToggleLine, RiEyeLine, RiRefreshLine, RiUserAddLine } from '@remixicon/react';
 
-// 데이터를 FastAPI 백엔드에서 가져오는 함수 (page.tsx에 있던 것과 유사하게)
-async function fetchPatientsForAdmin(token: string | null, organizationId: number | undefined): Promise<Patient[]> {
+// 데이터를 FastAPI 백엔드에서 가져오는 함수
+async function fetchPatientsForAdmin(token: string | null, organizationId: number | undefined, router: any): Promise<Patient[]> { // router 인자 추가
     if (!token || organizationId === undefined) {
         console.warn("인증 토큰 또는 기관 ID가 없어 환자 목록을 가져올 수 없습니다.");
         return [];
     }
 
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const API_URL = `${BASE_API_URL}/api/v1/patients/?organization_id=${organizationId}`;
+    const API_URL = `http://127.0.0.1:8000/api/v1/patients/?organization_id=${organizationId}`;
 
     try {
         const response = await fetch(API_URL, {
@@ -28,6 +26,15 @@ async function fetchPatientsForAdmin(token: string | null, organizationId: numbe
                 'Content-Type': 'application/json',
             },
         });
+
+        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
+            console.error("fetchPatientsForAdmin: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
+            if (typeof window !== "undefined") {
+                localStorage.clear(); // 로컬 스토리지 클리어
+                router.replace('/login'); // useRouter를 사용하여 로그인 페이지로 리다이렉트
+            }
+            return [];
+        }
 
         if (!response.ok) {
             console.error("환자 관리 목록 API 요청 실패:", response.status, await response.text());
@@ -71,14 +78,13 @@ async function fetchPatientsForAdmin(token: string | null, organizationId: numbe
     }
 }
 
-async function deletePatientAPI(patientId: number, token: string | null): Promise<boolean> {
+async function deletePatientAPI(patientId: number, token: string | null, router: any): Promise<boolean> { // router 인자 추가
     if (!token) {
         console.warn("인증 토큰이 없어 환자를 삭제할 수 없습니다.");
         return false;
     }
 
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const DELETE_PATIENT_API_URL = `${BASE_API_URL}/api/v1/patients/${patientId}`;
+    const DELETE_PATIENT_API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`;
 
     try {
         console.log(`Deleting patient ID ${patientId} via API: ${DELETE_PATIENT_API_URL}`);
@@ -88,6 +94,15 @@ async function deletePatientAPI(patientId: number, token: string | null): Promis
                 'Authorization': `Bearer ${token}`,
             },
         });
+
+        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
+            console.error("deletePatientAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
+            if (typeof window !== "undefined") {
+                localStorage.clear();
+                router.replace('/login');
+            }
+            return false;
+        }
 
         if (response.status === 204) {
             console.log(`환자 ID ${patientId} 삭제 성공.`);
@@ -112,15 +127,15 @@ async function deletePatientAPI(patientId: number, token: string | null): Promis
 async function updatePatientStatusAPI(
     patientId: number,
     newStatus: PatientStatus,
-    token: string | null
+    token: string | null,
+    router: any // router 인자 추가
 ): Promise<Patient | null> {
     if (!token) {
         console.warn("인증 토큰이 없어 환자 상태를 변경할 수 없습니다.");
         return null;
     }
 
-    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
-    const UPDATE_STATUS_API_URL = `${BASE_API_URL}/api/v1/patients/${patientId}`;
+    const UPDATE_STATUS_API_URL = `http://127.0.0.1:8000/api/v1/patients/${patientId}`;
 
     try {
         console.log(`Updating patient ID ${patientId} status to ${newStatus} via API: ${UPDATE_STATUS_API_URL}`);
@@ -132,6 +147,15 @@ async function updatePatientStatusAPI(
             },
             body: JSON.stringify({ status: newStatus }),
         });
+
+        if (response.status === 401) { // 401 Unauthorized 응답이 왔을 때
+            console.error("updatePatientStatusAPI: 인증 토큰이 만료되었거나 유효하지 않습니다. 로그인 페이지로 이동합니다.");
+            if (typeof window !== "undefined") {
+                localStorage.clear();
+                router.replace('/login');
+            }
+            return null;
+        }
 
         if (response.ok) {
             const updatedPatientData = await response.json();
@@ -152,10 +176,10 @@ async function updatePatientStatusAPI(
 
 
 export default function PatientManagementPage() {
-    const router = useRouter();
+    const router = useRouter(); // useRouter 훅 가져오기
     const [patients, setPatients] = useState<Patient[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null); // User -> CurrentUser
+    const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
     const [authToken, setAuthToken] = useState<string | null>(null);
 
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -163,7 +187,6 @@ export default function PatientManagementPage() {
 
     const [searchTerm, setSearchTerm] = useState('');
 
-    // 인증 상태 및 사용자 정보 로드 (메인 페이지와 유사한 로직)
     useEffect(() => {
         if (typeof window !== "undefined") {
             const token = localStorage.getItem('authToken');
@@ -171,48 +194,43 @@ export default function PatientManagementPage() {
             if (token && userJson) {
                 try {
                     setAuthToken(token);
-                    setCurrentUser(JSON.parse(userJson) as UserProfile); // UserProfile로 파싱
+                    setCurrentUser(JSON.parse(userJson) as UserProfile);
                 } catch (e) {
                     console.error("사용자 정보 파싱 오류:", e);
                     localStorage.clear();
                     router.replace('/login');
                 }
             } else {
-                localStorage.clear(); // 토큰이나 유저 정보가 없으면 정리
                 router.replace('/login');
             }
         }
     }, [router]);
 
-    // 환자 데이터 로드
     useEffect(() => {
         const loadData = async () => {
             if (currentUser && authToken && currentUser.organization?.id) {
                 setIsLoading(true);
-                const fetchedPatients = await fetchPatientsForAdmin(authToken, currentUser.organization.id);
+                // router 인자를 fetchPatientsForAdmin에 전달
+                const fetchedPatients = await fetchPatientsForAdmin(authToken, currentUser.organization.id, router);
                 setPatients(fetchedPatients);
                 setIsLoading(false);
             } else if (currentUser && !currentUser.organization?.id) {
                 console.warn("현재 사용자에게 소속 기관 정보가 없습니다.");
                 setIsLoading(false);
                 setPatients([]);
-            } else {
-                // currentUser나 authToken이 아직 로드되지 않았으면 대기
-                setIsLoading(true);
             }
         };
 
-        if (authToken) { // authToken이 존재할 때만 데이터 로드를 시도
+        if (isAuthenticated()) {
             loadData();
-        } else if (!isLoading) { // authToken이 없는데, 로딩 상태가 아니면 (인증 실패로 간주하고)
-            // 이미 useEffect 위에서 router.replace('/login')을 호출했을 가능성 있음
-            // 또는 초기 로드 중인 경우 (isLoading이 true)
+        } else if (typeof window !== "undefined" && !localStorage.getItem('authToken')) {
+            setIsLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentUser, authToken]);
+    }, [currentUser, authToken, router]); // router를 의존성 배열에 추가
 
     const handleConfirmStatusUpdate = async (patientId: number, newStatus: PatientStatus) => {
-        const updatedPatient = await updatePatientStatusAPI(patientId, newStatus, authToken);
+        // router 인자를 updatePatientStatusAPI에 전달
+        const updatedPatient = await updatePatientStatusAPI(patientId, newStatus, authToken, router);
         if (updatedPatient) {
             setPatients(prevPatients =>
                 prevPatients.map(p => (p.patient_id === patientId ? updatedPatient : p))
@@ -237,7 +255,8 @@ export default function PatientManagementPage() {
 
     const handleDeletePatient = async (patientId: number) => {
         if (window.confirm(`정말로 ID ${patientId} 환자 정보를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
-            const success = await deletePatientAPI(patientId, authToken);
+            // router 인자를 deletePatientAPI에 전달
+            const success = await deletePatientAPI(patientId, authToken, router);
             if (success) {
                 setPatients(prevPatients => prevPatients.filter(p => p.patient_id !== patientId));
                 alert(`환자 ID ${patientId} 정보가 삭제되었습니다.`);
@@ -255,6 +274,18 @@ export default function PatientManagementPage() {
             (patient.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
         );
     }, [patients, searchTerm]);
+
+    const handleChangePatientStatus = async (patientId: number, newStatus: PatientStatus) => {
+        // router 인자를 updatePatientStatusAPI에 전달
+        const updatedPatient = await updatePatientStatusAPI(patientId, newStatus, authToken, router);
+
+        if (updatedPatient) {
+            setPatients(prevPatients =>
+                prevPatients.map(p => (p.patient_id === patientId ? updatedPatient : p))
+            );
+            alert(`환자 ID ${patientId}의 상태가 ${newStatus}(으)로 변경되었습니다.`);
+        }
+    };
 
     const openStatusUpdateModal = (patient: Patient) => {
         setSelectedPatientForStatusUpdate(patient);
@@ -279,7 +310,8 @@ export default function PatientManagementPage() {
                             onClick={async () => {
                                 if (currentUser && authToken && currentUser.organization?.id) {
                                     setIsLoading(true);
-                                    const fetchedPatients = await fetchPatientsForAdmin(authToken, currentUser.organization.id);
+                                    // router 인자를 fetchPatientsForAdmin에 전달
+                                    const fetchedPatients = await fetchPatientsForAdmin(authToken, currentUser.organization.id, router);
                                     setPatients(fetchedPatients);
                                     setIsLoading(false);
                                 }
