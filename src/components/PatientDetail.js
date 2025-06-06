@@ -25,7 +25,8 @@ const PatientDetail = ({ patient }) => {
     lastMovement,
     movementPattern,
     current_fall_status, // API 응답의 필드명과 Patient 타입을 일치시켜야 함
-    gps
+    gps,
+    lastUpdated,
   } = patient;
 
   return (
@@ -45,10 +46,12 @@ const PatientDetail = ({ patient }) => {
         <HeartRateCard
           currentValue={current_heart_rate ?? null}
           historyData={heart_rate_history || []}
+          lastUpdated={lastUpdated}
         />
         <TemperatureCard
-          currentValue={current_temperature ?? null} // ✨ TemperatureCard도 동일하게 수정 필요
-          historyData={temperature_history || []}   // ✨ TemperatureCard도 동일하게 수정 필요
+          currentValue={current_temperature ?? null}
+          historyData={temperature_history || []}
+          lastUpdated={lastUpdated}
         />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"> {/* */}

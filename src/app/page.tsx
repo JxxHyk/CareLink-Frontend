@@ -22,7 +22,7 @@ import PatientList from '@/components/PatientList'; //
 import PatientDetail from '@/components/PatientDetail'; //
 import { timeSeriesData } from '@/lib/timeSeriesMockData'; //
 
-const SIMULATION_INTERVAL = 1000; // 센서 값 업데이트 주기 (ms)
+const SIMULATION_INTERVAL = 2000; // 센서 값 업데이트 주기 (ms)
 
 // fetchAllPatientsFromAPI 함수는 이전 단계에서 정의한 것을 그대로 사용한다고 가정
 async function fetchAllPatientsFromAPI(token: string | null, organizationInfo: IdNamePair | undefined | null): Promise<Patient[]> {
