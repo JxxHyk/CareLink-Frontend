@@ -15,11 +15,12 @@ async function fetchPatientsForAdmin(token: string | null, organizationId: numbe
         console.warn("인증 토큰 또는 기관 ID가 없어 환자 목록을 가져올 수 없습니다.");
         return [];
     }
-
-    const API_URL = `http://127.0.0.1:8000/api/v1/patients/?organization_id=${organizationId}`;
+    
+    const BASE_API_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'http://127.0.0.1:8000';
+    const PATIENTS_API_URL = `${BASE_API_URL}/api/v1/patients/?organization_id=${organizationId}`; // 이 줄을 직접 타이핑!
 
     try {
-        const response = await fetch(API_URL, {
+        const response = await fetch(PATIENTS_API_URL, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

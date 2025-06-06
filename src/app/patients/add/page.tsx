@@ -241,7 +241,7 @@ export default function AddPatientPage() {
               <select name="status" id="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white">
                 <option value={PatientStatus.ACTIVE}>Active (활성)</option>
                 <option value={PatientStatus.INACTIVE}>Inactive (비활성)</option>
-                <option value={PatientStatus.DISCHARGED}>Discharged (퇴원/종료)</option>
+                <option value={PatientStatus.ARCHIVED}>Archived (논리적 삭제)</option>
               </select>
             </div>
             <div>
