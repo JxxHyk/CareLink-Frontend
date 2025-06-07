@@ -70,10 +70,20 @@ export async function logoutUser(token: string): Promise<void> {
   }
 }
 
-interface RegisterUserResponse {
-  id: number;
+// interface RegisterUserResponse {
+//   id: number;
+//   username: string;
+//   email: string | null;
+// }
+
+interface RegisterUserData {
   username: string;
-  email: string | null;
+  email?: string | null;
+  password?: string;
+  full_name?: string | null;
+  phone_number?: string | null;
+  organization_id: number;
+  user_type: UserType;
 }
 
 interface RegisterUserData {
@@ -86,13 +96,14 @@ interface RegisterUserData {
   user_type: UserType;
 }
 
-export async function registerUser(data: RegisterUserData): Promise<RegisterUserResponse> {
+// 💡 registerUser 함수의 반환 타입을 UserProfile로 변경!
+export async function registerUser(data: RegisterUserData): Promise<UserProfile> {
   const response = await fetch(`${BASE_API_URL}/api/v1/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  return handleApiResponse<RegisterUserResponse>(response);
+  return handleApiResponse<UserProfile>(response); // 💡 여기서도 UserProfile로 변경!
 }
 
 // -------------------- 환자 관련 API --------------------

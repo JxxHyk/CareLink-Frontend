@@ -43,7 +43,8 @@ export interface Organization extends TimestampFields {
   address?: string | null;
   contact_number?: string | null;
   email?: string | null;
-  registration_date?: string | null;
+  // 스키마 변경
+  // registration_date?: string | null;
   status?: OrganizationStatus | string | null; // ✨ OrganizationStatus Enum 사용
   mobius_organization_path?: string | null;
 }

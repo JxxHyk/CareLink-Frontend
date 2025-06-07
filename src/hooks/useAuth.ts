@@ -23,12 +23,12 @@ export function useAuth(): UseAuthReturn {
 
   const logoutAndRedirect = useCallback(async () => {
     if (authToken) {
-      try {
-        await logoutUser(authToken);
-        console.log("백엔드 로그아웃 성공");
-      } catch (error) {
-        console.error("백엔드 로그아웃 실패:", error);
-      }
+      // try {
+      //   await logoutUser(authToken);
+      //   console.log("백엔드 로그아웃 성공");
+      // } catch (error) {
+      //   console.error("백엔드 로그아웃 실패:", error);
+      // }
     }
     if (typeof window !== "undefined") {
       localStorage.clear();

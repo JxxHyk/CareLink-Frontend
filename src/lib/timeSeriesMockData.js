@@ -25,7 +25,7 @@ const generateSeries = (base, points, fluctuation, min, max, toFixed = 0) => {
 
 // 환자 ID별 시계열 데이터
 export const timeSeriesData = {
-  236: { // 홍길동 환자의 patient_id
+  1: { // 홍길동 환자의 patient_id
     heartRate: generateSeries(78, 100, 6, 50, 120), // 100개의 심박수 데이터
     temperature: generateSeries(36.8, 100, 0.4, 35.0, 38.5, 1), // 100개의 체온 데이터
   },
